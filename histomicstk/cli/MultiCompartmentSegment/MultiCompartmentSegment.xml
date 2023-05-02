@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<executable>
+  <category>HistomicsTK</category>
+  <title>Multi Compartment Segmentation</title>
+  <description>Segments multi-level structures from a whole-slide image</description>
+  <version>0.1.0</version>
+  <documentation-url>https://github.com/SarderLab/deeplab-WSI</documentation-url>
+  <license>Apache 2.0</license>
+  <contributor>Sayat Mimar (UFL)</contributor>
+  <acknowledgements>This work is part of efforts in digital pathology by the Sarder Lab: UFL.</acknowledgements>
+  <parameters>
+    <label>IO</label>
+    <description>Input/output parameters</description>
+    <string>
+      <name>option</name>
+      <longflag>option</longflag>
+      <label>option</label>
+      <description>option: can be new, prediction</description>
+      <default></default>
+    </string>
+    <directory>
+      <name>project</name>
+      <label>project</label>
+      <description>project folder</description>
+      <channel>input</channel>
+      <index>0</index>
+    </directory>
+    <directory>
+      <name>base_dir</name>
+      <label>Base Directory</label>
+      <description>Base Directory for the model</description>
+      <channel>input</channel>
+      <index>1</index>
+    </directory>
+    <file>
+      <name>modelfile</name>
+      <label>Model File</label>
+      <description> Trained model file</description>
+      <channel>input</channel>
+      <index>2</index>
+    </file>
+  </parameters>
+</executable>

@@ -1,0 +1,21 @@
+SLURM_JOBID=43858554
+SLURM_JOB_NODELIST=c38a-s13
+SLURM_NNODES=1
+SLURMTMPDIR=
+working directory = /home/nlucarelli/detectron2_HAIL
+Launch job
+time="2022-08-03T17:56:35-04:00" level=warning msg="\"/run/user/6265\" directory set by $XDG_RUNTIME_DIR does not exist. Either create the directory or unset $XDG_RUNTIME_DIR.: stat /run/user/6265: no such file or directory: Trying to pull image in the event that it is a public image."
+Failed to load OpenCL runtime
+Traceback (most recent call last):
+  File "/exec/segmentation_school.py", line 275, in <module>
+    main(args=args)
+  File "/exec/segmentation_school.py", line 49, in main
+    from IterativePredict_1X import predict
+  File "/home/nlucarelli/detectron2_HAIL/Codes/IterativePredict_1X.py", line 31, in <module>
+    import openslide
+  File "/home/nlucarelli/privatemodules/openslide-master/openslide/__init__.py", line 35, in <module>
+    from openslide import lowlevel
+  File "/home/nlucarelli/privatemodules/openslide-master/openslide/lowlevel.py", line 40, in <module>
+    from . import _convert
+ImportError: cannot import name '_convert'
+All Done!

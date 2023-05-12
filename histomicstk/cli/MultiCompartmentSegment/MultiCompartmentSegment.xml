@@ -18,13 +18,13 @@
       <description>option: can be new, prediction</description>
       <default></default>
     </string>
-    <directory>
-      <name>project</name>
-      <label>project</label>
-      <description>project folder</description>
+    <image>
+      <name>input_file</name>
+      <label>input_file</label>
+      <description>input file</description>
       <channel>input</channel>
       <index>0</index>
-    </directory>
+    </image>
     <directory>
       <name>base_dir</name>
       <label>Base Directory</label>
@@ -39,5 +39,23 @@
       <channel>input</channel>
       <index>2</index>
     </file>
+  </parameters>
+  <parameters advanced="true">
+    <label>Girder API URL and Key</label>
+    <description>A Girder API URL and token for Girder client</description>
+    <string>
+      <name>girderApiUrl</name>
+      <longflag>api-url</longflag>
+      <label>Girder API URL</label>
+      <description>A Girder API URL (e.g., https://girder.example.com:443/api/v1)</description>
+      <default></default>
+    </string>
+    <string>
+      <name>girderToken</name>
+      <longflag>token</longflag>
+      <label>Girder API Token</label>
+      <description>A Girder token</description>
+      <default></default>
+    </string>
   </parameters>
 </executable>

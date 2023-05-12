@@ -28,6 +28,12 @@ main code for training semantic segmentation of WSI iteratively
 
 """
 
+# def get_girder_client(args):
+#     gc = girder_client.GirderClient(apiUrl=args.girderApiUrl)
+#     gc.setToken(args.girderToken)
+    
+#     return gc
+
 def str2bool(v):
     if isinstance(v, bool):
         return v
@@ -37,6 +43,7 @@ def str2bool(v):
         return False
     else:
         raise argparse.ArgumentTypeError('Boolean value expected.')
+
 
 def main(args):
 
@@ -93,14 +100,17 @@ def main(args):
 
 def savetime(args, starttime):
     if args.option in ['new', 'New']:
-        with open(args.project + '/runtime.txt', 'w') as timefile:
-            timefile.write('option' +'\t'+ 'time' +'\t'+ 'epochs_LR' +'\t'+ 'epochs_HR' +'\t'+ 'aug_LR' +'\t'+ 'aug_HR' +'\t'+ 'overlap_percentLR' +'\t'+ 'overlap_percentHR')
+        print('new')
+        # with open(args.runtime_file, 'w') as timefile:
+        #     timefile.write('option' +'\t'+ 'time' +'\t'+ 'epochs_LR' +'\t'+ 'epochs_HR' +'\t'+ 'aug_LR' +'\t'+ 'aug_HR' +'\t'+ 'overlap_percentLR' +'\t'+ 'overlap_percentHR')
     if args.option in ['train', 'Train']:
-        with open( args.project + '/runtime.txt', 'a') as timefile:
-            timefile.write('\n' + args.option +'\t'+ str(time.time()-starttime) +'\t'+ str(args.epoch_LR) +'\t'+ str(args.epoch_HR) +'\t'+ str(args.aug_LR) +'\t'+ str(args.aug_HR) +'\t'+ str(args.overlap_percentLR) +'\t'+ str(args.overlap_percentHR))
+        print('not much')
+        # with open(args.runtime_file, 'a') as timefile:
+        #     timefile.write('\n' + args.option +'\t'+ str(time.time()-starttime) +'\t'+ str(args.epoch_LR) +'\t'+ str(args.epoch_HR) +'\t'+ str(args.aug_LR) +'\t'+ str(args.aug_HR) +'\t'+ str(args.overlap_percentLR) +'\t'+ str(args.overlap_percentHR))
     if args.option in ['predict', 'Predict']:
-        with open(args.project + '/runtime.txt', 'a') as timefile:
-            timefile.write('\n' + args.option +'\t'+ str(time.time()-starttime))
+        print('predict')
+        # with open(args.runtime_file, 'a') as timefile:
+        #     timefile.write('\n' + args.option +'\t'+ str(time.time()-starttime))
 
 
 if __name__ == '__main__':
@@ -110,6 +120,12 @@ if __name__ == '__main__':
     # School subject
     parser.add_argument('--project', dest='project', default=' ' ,type=str,
         help='Starting directory to contain training project')
+    parser.add_argument('--girderApiUrl', dest='girderApiUrl', default=' ' ,type=str,
+        help='girderApiUrl')
+    parser.add_argument('--girderToken', dest='girderToken', default=' ' ,type=str,
+        help='girderToken')
+    parser.add_argument('--files', dest='files', default=' ' ,type=list,
+        help='files')
     # option
     parser.add_argument('--option', dest='option', default=' ' ,type=str,
         help='option for [new, train, predict, validate]')
@@ -242,7 +258,7 @@ if __name__ == '__main__':
         help='chop dot based images to this max size')
 
     ### Params for saving results ###
-    parser.add_argument('--outDir', dest='outDir', default='/Predictions/' ,type=str,
+    parser.add_argument('--outDir', dest='outDir', default='Predictions' ,type=str,
         help='output directory')
     parser.add_argument('--save_outputs', dest='save_outputs', default=False ,type=bool,
         help='save outputs from chopping etc. [final image masks]')

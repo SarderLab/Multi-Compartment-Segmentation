@@ -1,7 +1,8 @@
-import cv2
+import cv2,girder_client
 import numpy as np
 import os
 import sys
+
 # import argparse
 # import multiprocessing
 import lxml.etree as ET
@@ -106,9 +107,16 @@ def predict(args):
     downsample = int(args.downsampleRateHR**.5)
     region_size = int(args.boxSize*(downsample))
     step = int((region_size-(args.bordercrop*2))*(1-args.overlap_percentHR))
-
-
+    gc = girder_client.GirderClient(apiUrl=args.girderApiUrl)
+    gc.setToken(args.girderToken)
+    project_folder = args.project
+    project_dir_id = project_folder.split('/')[-2]
+    #model_file = args.modelfile
+    #print(model_file,'here model')
+    #model_file_id = model_file .split('/')[-2]
+    
     print('Handcoded iteration')
+
     iteration=1
     print(iteration)
     dirs['xml_save_dir'] = dirs['training_data_dir'] + str(iteration) + '/Predicted_XMLs/'
@@ -119,16 +127,27 @@ def predict(args):
 
     else:
         # check main directory exists
-        make_folder(dirs['outDir'])
-        make_folder(dirs['xml_save_dir'])
+        # make_folder(dirs['outDir'])
+        # outdir = gc.createFolder(project_directory_id,args.outDir)
+        # it = gc.createFolder(outdir['_id'],str(iteration))
 
         # get all WSIs
         WSIs = []
-        usable_ext=args.wsi_ext.split(',')
-        for ext in usable_ext:
-            WSIs.extend(glob.glob(dirs['training_data_dir'] + str(iteration) + '/*' + ext))
+        # usable_ext=args.wsi_ext.split(',')
+        # for ext in usable_ext:
+        #     WSIs.extend(glob.glob(args.project + '/*' + ext))
+        #     print('another one')
+
+        for file in args.files:
+            print(file)
+            slidename = file['name']
+            _ = os.system("printf '\n---\n\nFOUND: [{}]\n'".format(slidename))
+            WSIs.append(slidename)
+
+        
+        print(len(WSIs), 'number of WSI' )
         print('Building network configuration ...\n')
-        modeldir = args.project + dirs['modeldir'] + str(iteration) + '/HR'
+        #modeldir = args.project + dirs['modeldir'] + str(iteration) + '/HR'
 
         os.environ["CUDA_VISIBLE_DEVICES"]=str(args.gpu)
 
@@ -148,7 +167,30 @@ def predict(args):
         else:
             cfg.INPUT.MIN_SIZE_TEST=int(region_size/2)
             cfg.INPUT.MAX_SIZE_TEST=int(region_size/2)
-        cfg.MODEL.WEIGHTS = args.modelfile
+        print(args.modelfile)
+
+        try:
+            cfg.MODEL.WEIGHTS = args.modelfile
+            print('here')
+        except:
+            cfg.MODEL.WEIGHTS = "https://dl.fbaipublicfiles.com/detectron2/COCO-Detection/faster_rcnn_R_50_C4_3x/137849393/model_final_f97cb7.pkl"
+            print('no here')
+        # try:
+        #     cfg.MODEL.WEIGHTS = os.path.join(args.base_dir, "model_0214999.pth")
+        # except:
+        #     print('olmadi')
+
+        # try:
+        #     cfg.MODEL.WEIGHTS = args.modelfile
+        # except:
+        #     print('olmadi 2')
+
+        # try:
+        #     os.chdir(args.base_dir)
+        #     cfg.MODEL.WEIGHTS = args.modelfile
+        # except:
+        #     print('olmadi 3')
+
 
         tc=['G','SG','T','A']
         sc=['Ob','C','M','B']
@@ -163,7 +205,7 @@ def predict(args):
 
         predictor = DefaultPredictor(cfg)
         broken_slides=[]
-        for wsi in WSIs:
+        for wsi in args.files:
             # try:
 
             # except Exception as e:
@@ -177,7 +219,8 @@ def predict(args):
             print(basename)
             # print(extname)
             # try:
-            slide=openslide.TiffSlide(wsi)
+            # slide=openslide.TiffSlide(wsi)
+            print(wsi,'here/s the silde')
             # slide = ti.imread(wsi)
 
             # except:

@@ -219,7 +219,7 @@ def predict(args):
             print(basename)
             # print(extname)
             # try:
-            # slide=openslide.TiffSlide(wsi)
+            slide=openslide.TiffSlide(wsi)
             print(wsi,'here/s the silde')
             # slide = ti.imread(wsi)
 
@@ -423,9 +423,12 @@ def file_len(fname): # get txt file length (number of lines)
 def xml_suey(wsiMask, dirs, args, classNum, downsample,glob_offset):
     # make xml
     Annotations = xml_create()
+    names=['Cortex','Medulla','glomerulus','sclerotic glomerulus','tubules','artery/arteriole']
+
     # add annotation
     for i in range(classNum)[1:]: # exclude background class
-        Annotations = xml_add_annotation(Annotations=Annotations, annotationID=i)
+        name = names[i]
+        Annotations = xml_add_annotation(Annotations=Annotations, annotationID=i, name=name)
 
 
     for value in np.unique(wsiMask)[1:]:
@@ -481,15 +484,15 @@ def xml_create(): # create new xml tree
     Annotations = ET.Element('Annotations')
     return Annotations
 
-def xml_add_annotation(Annotations, annotationID=None): # add new annotation
+def xml_add_annotation(Annotations, annotationID=None , name='na'): # add new annotation
     # add new Annotation to Annotations
     # defualts to new annotationID
     if annotationID == None: # not specified
         annotationID = len(Annotations.findall('Annotation')) + 1
     if annotationID in [1,2]:
-        Annotation = ET.SubElement(Annotations, 'Annotation', attrib={'Type': '4', 'Visible': '0', 'ReadOnly': '0', 'Incremental': '0', 'LineColorReadOnly': '0', 'LineColor': str(xml_color[annotationID-1]), 'Id': str(annotationID), 'NameReadOnly': '0'})
+        Annotation = ET.SubElement(Annotations, 'Annotation', attrib={'Type': '4', 'Visible': '0', 'ReadOnly': '0', 'Incremental': '0', 'LineColorReadOnly': '0', 'LineColor': str(xml_color[annotationID-1]), 'Id': str(annotationID), 'LayerName': name,  'NameReadOnly': '0'})
     else:
-        Annotation = ET.SubElement(Annotations, 'Annotation', attrib={'Type': '4', 'Visible': '1', 'ReadOnly': '0', 'Incremental': '0', 'LineColorReadOnly': '0', 'LineColor': str(xml_color[annotationID-1]), 'Id': str(annotationID), 'NameReadOnly': '0'})
+        Annotation = ET.SubElement(Annotations, 'Annotation', attrib={'Type': '4', 'Visible': '1', 'ReadOnly': '0', 'Incremental': '0', 'LineColorReadOnly': '0', 'LineColor': str(xml_color[annotationID-1]), 'Id': str(annotationID), 'LayerName': name, 'NameReadOnly': '0'})
     Regions = ET.SubElement(Annotation, 'Regions')
     return Annotations
 
@@ -652,13 +655,13 @@ class XMLBuilder():
         self.xml_save()
 
 
-    def xml_add_annotation(self, annotationID=None): # add new annotation
+    def xml_add_annotation(self, annotationID=None, name='na'): # add new annotation
         # add new Annotation to Annotations
         # defualts to new annotationID
         if annotationID == None: # not specified
             annotationID = len(self.Annotations.findall('Annotation')) + 1
         Annotation = ET.SubElement(self.Annotations, 'Annotation', attrib={'Type': '4',
-            'Visible': '1', 'ReadOnly': '0', 'Incremental': '0', 'LineColorReadOnly': '0',
+            'Visible': '1', 'ReadOnly': '0', 'Incremental': '0', 'LineColorReadOnly': '0', 'LayerName': name,
             'LineColor': str(self.class_colors[annotationID-1]), 'Id': str(annotationID), 'NameReadOnly': '0'})
         Regions = ET.SubElement(Annotation, 'Regions')
         # return Annotations

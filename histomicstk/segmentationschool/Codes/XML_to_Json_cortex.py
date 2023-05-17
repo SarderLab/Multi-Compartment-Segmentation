@@ -11,7 +11,7 @@ import xml.etree.ElementTree as ET
 # import glob
 
 
-def convert_xml_json(root, groupByName,names):
+def convert_xml_json(root, groupByName, names):
 
     colorList = ["rgb(0, 255, 0)", "rgb(0, 255,255)", "rgb(255, 255, 0)",  "rgb(255, 0, 0)","rgb(0, 0, 255)",
                  "rgb(255, 128, 0)", "rgb(0, 102, 0)", "rgb(153, 0, 0)", "rgb(0, 153, 0)", "rgb(102, 0, 204)",
@@ -24,7 +24,8 @@ def convert_xml_json(root, groupByName,names):
         data = dict()
         ann = root.find('Annotation')
         attr = ann.find('Attributes')
-        name=names[0]
+        layerName = ann.find('LayerName')
+        name=layerName.text
         element = []
         reg = ann.find('Regions')
         for i in reg.findall('Region'):

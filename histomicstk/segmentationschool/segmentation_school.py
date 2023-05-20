@@ -118,7 +118,7 @@ if __name__ == '__main__':
 
     ##### Main params (MANDITORY) ##############################################
     # School subject
-    parser.add_argument('--project', dest='project', default=' ' ,type=str,
+    parser.add_argument('--base_dir', dest='base_dir', default=' ' ,type=str,
         help='Starting directory to contain training project')
     parser.add_argument('--girderApiUrl', dest='girderApiUrl', default=' ' ,type=str,
         help='girderApiUrl')

@@ -22,7 +22,7 @@ def main(args):
 
 
     _ = os.system("printf '\n---\n\nFOUND: [{}]\n'".format(args.input_file))
-    print(os.path.getsize(args.input_file))
+    #print(os.path.getsize(args.input_file))
     slide=openslide.TiffSlide(args.input_file)
 
     print('yess')
@@ -37,10 +37,10 @@ def main(args):
 
 
 
-    modelfile = torch.load(args.modelfile)
+    # modelfile = torch.load(args.modelfile)
     # torch.save(modelfile)
-    os.system('pwd')
-    os.system('ls -lh')
+    # os.system('pwd')
+    # os.system('ls -lh')
     # tmp = args.outputAnnotationFile
     # tmp = os.path.dirname(tmp)
     # #print(tmp)
@@ -58,7 +58,7 @@ def main(args):
 
     #print(model)
     #print('\noutput filename: {}\n'.format(args.outputAnnotationFile))
-    cmd = "python3 ../segmentationschool/segmentation_school.py --option {} --base_dir {} --modelfile {} --girderApiUrl {} --girderToken {} --files {}".format(args.option, args.base_dir, args.modelfile, args.girderApiUrl, args.girderToken, [args.input_file])
+    cmd = "python3 ../segmentationschool/segmentation_school.py --option {} --base_dir {} --modelfile {} --girderApiUrl {} --girderToken {} --files {}".format(args.option, args.base_dir, args.modelfile, args.girderApiUrl, args.girderToken, WSIs)
     print(cmd)
     sys.stdout.flush()
     os.system(cmd)

@@ -91,7 +91,7 @@ def decode_panoptic(image,segments_info,organType,args):
 
 def predict(args):
     # define folder structure dict
-    dirs = {'outDir': args.project + args.outDir}
+    dirs = {'outDir': args.base_dir}
     dirs['txt_save_dir'] = '/txt_files/'
     dirs['img_save_dir'] = '/img_files/'
     dirs['mask_dir'] = '/wsi_mask/'
@@ -107,10 +107,10 @@ def predict(args):
     downsample = int(args.downsampleRateHR**.5)
     region_size = int(args.boxSize*(downsample))
     step = int((region_size-(args.bordercrop*2))*(1-args.overlap_percentHR))
-    gc = girder_client.GirderClient(apiUrl=args.girderApiUrl)
-    gc.setToken(args.girderToken)
-    project_folder = args.project
-    project_dir_id = project_folder.split('/')[-2]
+    # gc = girder_client.GirderClient(apiUrl=args.girderApiUrl)
+    # gc.setToken(args.girderToken)
+    # project_folder = args.project
+    # project_dir_id = project_folder.split('/')[-2]
     #model_file = args.modelfile
     #print(model_file,'here model')
     #model_file_id = model_file .split('/')[-2]
@@ -119,9 +119,9 @@ def predict(args):
 
     iteration=1
     print(iteration)
-    dirs['xml_save_dir'] = dirs['training_data_dir'] + str(iteration) + '/Predicted_XMLs/'
-    real_path = os.path.realpath(args.project)
-    print(real_path)
+    dirs['xml_save_dir'] = args.base_dir
+    #real_path = os.path.realpath(args.project)
+    #print(real_path)
     if iteration == 'none':
         print('ERROR: no trained models found \n\tplease use [--option train]')
 
@@ -219,7 +219,7 @@ def predict(args):
             print(basename)
             # print(extname)
             # try:
-            slide=openslide.TiffSlide(wsi)
+            # slide=openslide.TiffSlide(wsi)
             print(wsi,'here/s the silde')
             # slide = ti.imread(wsi)
 
@@ -367,7 +367,7 @@ def coordinate_pairs(v1,v2):
         for j in v2:
             yield i,j
 def get_iteration(args):
-    currentmodels=os.listdir(args.base_dir + '/' + args.project + '/MODELS/')
+    currentmodels=os.listdir(args.base_dir)
     if not currentmodels:
         return 'none'
     else:
@@ -423,12 +423,9 @@ def file_len(fname): # get txt file length (number of lines)
 def xml_suey(wsiMask, dirs, args, classNum, downsample,glob_offset):
     # make xml
     Annotations = xml_create()
-    names=['Cortex','Medulla','glomerulus','sclerotic glomerulus','tubules','artery/arteriole']
-
     # add annotation
     for i in range(classNum)[1:]: # exclude background class
-        name = names[i]
-        Annotations = xml_add_annotation(Annotations=Annotations, annotationID=i, name=name)
+        Annotations = xml_add_annotation(Annotations=Annotations, annotationID=i)
 
 
     for value in np.unique(wsiMask)[1:]:
@@ -484,15 +481,15 @@ def xml_create(): # create new xml tree
     Annotations = ET.Element('Annotations')
     return Annotations
 
-def xml_add_annotation(Annotations, annotationID=None , name='na'): # add new annotation
+def xml_add_annotation(Annotations, annotationID=None): # add new annotation
     # add new Annotation to Annotations
     # defualts to new annotationID
     if annotationID == None: # not specified
         annotationID = len(Annotations.findall('Annotation')) + 1
     if annotationID in [1,2]:
-        Annotation = ET.SubElement(Annotations, 'Annotation', attrib={'Type': '4', 'Visible': '0', 'ReadOnly': '0', 'Incremental': '0', 'LineColorReadOnly': '0', 'LineColor': str(xml_color[annotationID-1]), 'Id': str(annotationID), 'LayerName': name,  'NameReadOnly': '0'})
+        Annotation = ET.SubElement(Annotations, 'Annotation', attrib={'Type': '4', 'Visible': '0', 'ReadOnly': '0', 'Incremental': '0', 'LineColorReadOnly': '0', 'LineColor': str(xml_color[annotationID-1]), 'Id': str(annotationID), 'NameReadOnly': '0'})
     else:
-        Annotation = ET.SubElement(Annotations, 'Annotation', attrib={'Type': '4', 'Visible': '1', 'ReadOnly': '0', 'Incremental': '0', 'LineColorReadOnly': '0', 'LineColor': str(xml_color[annotationID-1]), 'Id': str(annotationID), 'LayerName': name, 'NameReadOnly': '0'})
+        Annotation = ET.SubElement(Annotations, 'Annotation', attrib={'Type': '4', 'Visible': '1', 'ReadOnly': '0', 'Incremental': '0', 'LineColorReadOnly': '0', 'LineColor': str(xml_color[annotationID-1]), 'Id': str(annotationID), 'NameReadOnly': '0'})
     Regions = ET.SubElement(Annotation, 'Regions')
     return Annotations
 
@@ -655,13 +652,13 @@ class XMLBuilder():
         self.xml_save()
 
 
-    def xml_add_annotation(self, annotationID=None, name='na'): # add new annotation
+    def xml_add_annotation(self, annotationID=None): # add new annotation
         # add new Annotation to Annotations
         # defualts to new annotationID
         if annotationID == None: # not specified
             annotationID = len(self.Annotations.findall('Annotation')) + 1
         Annotation = ET.SubElement(self.Annotations, 'Annotation', attrib={'Type': '4',
-            'Visible': '1', 'ReadOnly': '0', 'Incremental': '0', 'LineColorReadOnly': '0', 'LayerName': name,
+            'Visible': '1', 'ReadOnly': '0', 'Incremental': '0', 'LineColorReadOnly': '0',
             'LineColor': str(self.class_colors[annotationID-1]), 'Id': str(annotationID), 'NameReadOnly': '0'})
         Regions = ET.SubElement(Annotation, 'Regions')
         # return Annotations

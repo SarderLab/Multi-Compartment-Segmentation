@@ -1,4 +1,4 @@
-import cv2,girder_client
+import cv2
 import numpy as np
 import os
 import sys
@@ -132,20 +132,20 @@ def predict(args):
         # it = gc.createFolder(outdir['_id'],str(iteration))
 
         # get all WSIs
-        WSIs = []
+        #WSIs = []
         # usable_ext=args.wsi_ext.split(',')
         # for ext in usable_ext:
         #     WSIs.extend(glob.glob(args.project + '/*' + ext))
         #     print('another one')
 
-        for file in args.files:
-            print(file)
-            slidename = file['name']
-            _ = os.system("printf '\n---\n\nFOUND: [{}]\n'".format(slidename))
-            WSIs.append(slidename)
+        # for file in args.files:
+        #     print(file)
+        #     slidename = file['name']
+        #     _ = os.system("printf '\n---\n\nFOUND: [{}]\n'".format(slidename))
+        #     WSIs.append(slidename)
 
         
-        print(len(WSIs), 'number of WSI' )
+        # print(len(WSIs), 'number of WSI' )
         print('Building network configuration ...\n')
         #modeldir = args.project + dirs['modeldir'] + str(iteration) + '/HR'
 
@@ -169,12 +169,16 @@ def predict(args):
             cfg.INPUT.MAX_SIZE_TEST=int(region_size/2)
         print(args.modelfile)
 
-        try:
-            cfg.MODEL.WEIGHTS = args.modelfile
-            print('here')
-        except:
-            cfg.MODEL.WEIGHTS = "https://dl.fbaipublicfiles.com/detectron2/COCO-Detection/faster_rcnn_R_50_C4_3x/137849393/model_final_f97cb7.pkl"
-            print('no here')
+        print(args.files)
+
+        # try:
+        #     cfg.MODEL.WEIGHTS = args.modelfile
+        #     print('here')
+        # except:
+        #     cfg.MODEL.WEIGHTS = "https://dl.fbaipublicfiles.com/detectron2/COCO-Detection/faster_rcnn_R_50_C4_3x/137849393/model_final_f97cb7.pkl"
+        #     print('no here')
+        cfg.MODEL.WEIGHTS = args.modelfile
+        #print('no here')
         # try:
         #     cfg.MODEL.WEIGHTS = os.path.join(args.base_dir, "model_0214999.pth")
         # except:
@@ -205,7 +209,8 @@ def predict(args):
 
         predictor = DefaultPredictor(cfg)
         broken_slides=[]
-        for wsi in args.files:
+        for wsi in [args.files]:
+            print(wsi)
             # try:
 
             # except Exception as e:
@@ -219,7 +224,7 @@ def predict(args):
             print(basename)
             # print(extname)
             # try:
-            # slide=openslide.TiffSlide(wsi)
+            slide=openslide.TiffSlide(wsi)
             print(wsi,'here/s the silde')
             # slide = ti.imread(wsi)
 

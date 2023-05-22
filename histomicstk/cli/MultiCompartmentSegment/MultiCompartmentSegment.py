@@ -1,8 +1,9 @@
 import os
 import sys
-import girder_client
-import torch
-import tiffslide as openslide
+# import girder_client
+# import torch
+import large_image
+# import tiffslide as openslide
 from histomicstk.cli.utils import CLIArgumentParser
 
 
@@ -23,12 +24,15 @@ def main(args):
 
     _ = os.system("printf '\n---\n\nFOUND: [{}]\n'".format(args.input_file))
     #print(os.path.getsize(args.input_file))
-    slide=openslide.TiffSlide(args.input_file)
 
+    slide=large_image.getTileSource(args.input_file)
+    print('hereee')
+    print(slide.getMetadata())
+    
     print('yess')
 
 
-    WSIs = [slide]
+
 
 
     cwd = os.getcwd()
@@ -58,7 +62,7 @@ def main(args):
 
     #print(model)
     #print('\noutput filename: {}\n'.format(args.outputAnnotationFile))
-    cmd = "python3 ../segmentationschool/segmentation_school.py --option {} --base_dir {} --modelfile {} --girderApiUrl {} --girderToken {} --files {}".format(args.option, args.base_dir, args.modelfile, args.girderApiUrl, args.girderToken, WSIs)
+    cmd = "python3 ../segmentationschool/segmentation_school.py --option {} --base_dir {} --modelfile {} --girderApiUrl {} --girderToken {} --files {}".format(args.option, args.base_dir, args.modelfile, args.girderApiUrl, args.girderToken, args.input_file)
     print(cmd)
     sys.stdout.flush()
     os.system(cmd)

@@ -118,13 +118,11 @@ if __name__ == '__main__':
 
     ##### Main params (MANDITORY) ##############################################
     # School subject
-    parser.add_argument('--base_dir', dest='base_dir', default=' ' ,type=str,
-        help='Starting directory to contain training project')
     parser.add_argument('--girderApiUrl', dest='girderApiUrl', default=' ' ,type=str,
         help='girderApiUrl')
     parser.add_argument('--girderToken', dest='girderToken', default=' ' ,type=str,
         help='girderToken')
-    parser.add_argument('--files', dest='files', default=' ' ,type=list,
+    parser.add_argument('--files', dest='files', default=' ' ,type=str,
         help='files')
     # option
     parser.add_argument('--option', dest='option', default=' ' ,type=str,

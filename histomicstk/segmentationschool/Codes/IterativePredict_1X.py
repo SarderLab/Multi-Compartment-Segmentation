@@ -1,8 +1,9 @@
 import cv2
 import numpy as np
 import os
+import json
 import sys
-
+import girder_client
 # import argparse
 # import multiprocessing
 import lxml.etree as ET
@@ -11,6 +12,7 @@ import lxml.etree as ET
 # import copy
 # from PIL import Image
 import glob
+from .xml_to_json import convert_xml_json
 # from subprocess import call
 # from joblib import Parallel, delayed
 # from skimage.io import imread,imsave
@@ -40,7 +42,7 @@ from skimage.filters import gaussian
 
 # from skimage.segmentation import clear_border
 
-
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:512"
 # from IterativeTraining import get_num_classes
 # from .get_choppable_regions import get_choppable_regions
 # from .get_network_performance import get_perf
@@ -295,12 +297,13 @@ def predict(args):
 
                         xLen=xEnd-j
                         yLen=yEnd-i
-
+                        xLen,yLen = xLen//4,yLen//4
                         dxS=j
                         dyS=i
                         dxE=j+xLen
                         dyE=i+yLen
-
+                        print(xLen,yLen)
+                        print('here is the length')
                         im=np.array(slide.read_region((dxS,dyS),0,(xLen,yLen)))[:,:,:3]
 
                         #UPSAMPLE
@@ -351,8 +354,10 @@ def predict(args):
             # xmlbuilder.sew(args)
             # xmlbuilder.dump_to_xml(args,offsetx,offsety)
             if extname=='.scn':
+                print('here writing 1')
                 xml_suey(wsiMask=wsiMask, dirs=dirs, args=args, classNum=classNum, downsample=downsample,glob_offset=[offsetx,offsety])
             else:
+                print('here writing 2')
                 xml_suey(wsiMask=wsiMask, dirs=dirs, args=args, classNum=classNum, downsample=downsample,glob_offset=[0,0])
 
 
@@ -442,22 +447,39 @@ def xml_suey(wsiMask, dirs, args, classNum, downsample,glob_offset):
 
         # add mask to xml
         pointsList = get_contour_points(binary_mask, args=args, downsample=downsample,value=value,offset={'X':glob_offset[0],'Y':glob_offset[1]})
-        for i in range(np.shape(pointsList)[0]):
+        for i in range(len(pointsList)):
             pointList = pointsList[i]
             Annotations = xml_add_region(Annotations=Annotations, pointList=pointList, annotationID=value)
 
     # save xml
-    print(dirs['xml_save_dir']+'/'+dirs['fileID']+'.xml')
-    xml_save(Annotations=Annotations, filename=dirs['xml_save_dir']+'/'+dirs['fileID']+'.xml')
+    folder = args.base_dir
+    girder_folder_id = folder.split('/')[-2]
+    _ = os.system("printf 'Using data from girder_client Folder: {}\n'".format(folder))
+    xml_data = ET.tostring(Annotations, pretty_print=True)
+    gc = girder_client.GirderClient(apiUrl=args.girderApiUrl)
+    gc.setToken(args.girderToken)
+    files = list(gc.listItem(girder_folder_id))
+    print(files)
+    file_id = files[0]['_id']
+    print(file_id)
+    annots = convert_xml_json(Annotations,['name1','name2','name3','name4','name5','name6'])
+    print(annots)
+
+    for annot in annots:
+        _ = gc.post(path='annotation',parameters={'itemId':file_id}, data=json.dumps(annot))
+        print('uploating layers')
+    print('annotation uploaded...\n')
+
+    #xml_save(Annotations=Annotations, filename='result.xml')
 
 def get_contour_points(mask, args, downsample,value, offset={'X': 0,'Y': 0}):
     # returns a dict pointList with point 'X' and 'Y' values
     # input greyscale binary image
-    _, maskPoints, contours = cv2.findContours(np.array(mask), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_TC89_KCOS)
+    maskPoints, contours = cv2.findContours(np.array(mask), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_TC89_KCOS)
     pointsList = []
     #maskPoints2=copy.deepcopy(maskPoints)
 
-    for j in np.array(range(np.shape(maskPoints)[0])):
+    for j in np.array(range(len(maskPoints))):
         if len(maskPoints[j])>2:
             #m=np.squeeze(np.asarray(maskPoints2[j]))
             #xMax=np.max(m[:,1])
@@ -474,11 +496,13 @@ def get_contour_points(mask, args, downsample,value, offset={'X': 0,'Y': 0}):
 
             if cv2.contourArea(maskPoints[j]) > args.min_size[value-1]:
                 pointList = []
-                for i in np.array(range(0,np.shape(maskPoints[j])[0],4)):
+                for i in np.array(range(0,len(maskPoints[j]),4)):
+                    print(maskPoints[j][i][0][0])
                     point = {'X': (maskPoints[j][i][0][0] * downsample) + offset['X'], 'Y': (maskPoints[j][i][0][1] * downsample) + offset['Y']}
+                    print(point)
                     pointList.append(point)
                 pointsList.append(pointList)
-    return np.array(pointsList)
+    return pointsList
 
 ### functions for building an xml tree of annotations ###
 def xml_create(): # create new xml tree
@@ -516,8 +540,8 @@ def xml_add_region(Annotations, pointList, annotationID=-1, regionID=None): # ad
 def xml_save(Annotations, filename):
     xml_data = ET.tostring(Annotations, pretty_print=True)
     #xml_data = Annotations.toprettyxml()
-    f = open(filename, 'wb')
-    f.write(xml_data)
+    f = open(filename, 'w')
+    f.write(xml_data.decode())
     f.close()
 
 def read_xml(filename):

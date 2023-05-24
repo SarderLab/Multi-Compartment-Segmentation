@@ -2,7 +2,7 @@ import os
 import sys
 # import girder_client
 # import torch
-import large_image
+#import large_image
 # import tiffslide as openslide
 from histomicstk.cli.utils import CLIArgumentParser
 
@@ -25,9 +25,9 @@ def main(args):
     _ = os.system("printf '\n---\n\nFOUND: [{}]\n'".format(args.input_file))
     #print(os.path.getsize(args.input_file))
 
-    slide=large_image.getTileSource(args.input_file)
-    print('hereee')
-    print(slide.getMetadata())
+ #   slide=large_image.getTileSource(args.input_file)
+  #  print('hereee')
+   # print(slide.getMetadata())
     
     print('yess')
 

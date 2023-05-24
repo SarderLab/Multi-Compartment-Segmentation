@@ -55,7 +55,7 @@ setup(
     install_requires=[
         # scientific packages
         'nimfa>=1.3.2',
-        'numpy>=1.12.1',
+        'numpy>=1.21.1',
         'scipy>=0.19.0',
         'Pillow>=3.2.0',
         'pandas>=0.19.2',

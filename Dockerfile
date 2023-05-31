@@ -144,7 +144,7 @@ RUN pip install --no-cache-dir --upgrade --ignore-installed pip setuptools && \
 
     #git clone https://github.com/facebookresearch/detectron2 detectron2_repo && \
     #git clone https://github.com/facebookresearch/detectron2.git && \
-    python -m pip install detectron2 -f https://dl.fbaipublicfiles.com/detectron2/wheels/cu102/torch1.10/index.html && \
+    python -m pip install detectron2 -f https://dl.fbaipublicfiles.com/detectron2/wheels/cu111/torch1.10/index.html && \
     #python -m pip install -e detectron2 && \
     # clean up \
     rm -rf /root/.cache/pip/*

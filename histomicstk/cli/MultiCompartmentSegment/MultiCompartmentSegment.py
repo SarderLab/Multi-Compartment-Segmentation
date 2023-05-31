@@ -62,7 +62,7 @@ def main(args):
 
     #print(model)
     #print('\noutput filename: {}\n'.format(args.outputAnnotationFile))
-    cmd = "python3 ../segmentationschool/segmentation_school.py --option {} --base_dir {} --modelfile {} --girderApiUrl {} --girderToken {} --files {}".format(args.option, args.base_dir, args.modelfile, args.girderApiUrl, args.girderToken, args.input_file)
+    cmd = "python3 ../segmentationschool/segmentation_school.py --option {} --base_dir {} --modelfile {} --girderApiUrl {} --girderToken {} --files {} --boxSize {} --bordercrop {}".format('predict', args.base_dir, args.modelfile, args.girderApiUrl, args.girderToken, args.input_file, args.boxSize, args.bordercrop)
     print(cmd)
     sys.stdout.flush()
     os.system(cmd)

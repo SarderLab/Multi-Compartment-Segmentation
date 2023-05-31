@@ -11,13 +11,6 @@
   <parameters>
     <label>IO</label>
     <description>Input/output parameters</description>
-    <string>
-      <name>option</name>
-      <longflag>option</longflag>
-      <label>option</label>
-      <description>option: can be new, prediction</description>
-      <default></default>
-    </string>
     <image>
       <name>input_file</name>
       <label>input_file</label>
@@ -39,6 +32,20 @@
       <channel>input</channel>
       <index>2</index>
     </file>
+    <integer>
+      <name>boxSize</name>
+      <label>box size</label>
+      <description> region size </description>
+      <channel>input</channel>
+      <index>3</index>
+    </integer>
+    <integer>
+      <name>bordercrop</name>
+      <label>bordercrop</label>
+      <description> bordercrop size </description>
+      <channel>input</channel>
+      <index>4</index>
+    </integer>
   </parameters>
   <parameters advanced="true">
     <label>Girder API URL and Key</label>

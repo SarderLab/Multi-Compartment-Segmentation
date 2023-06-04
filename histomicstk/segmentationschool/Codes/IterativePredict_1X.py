@@ -287,7 +287,7 @@ def predict(args):
             count = 1
             zoomed_patches = []
             #output_patches = np.empty((patch_height, patch_width)).astype(np.uint8)
-            maskparts=[]
+            maskparts=[] 
             for i in range(patches.shape[0]):
                 for j in range(patches.shape[1]):
                     im = patches[i, j, 0]

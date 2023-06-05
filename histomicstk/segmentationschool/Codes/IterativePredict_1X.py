@@ -191,7 +191,7 @@ def predict(args):
         predictor = DefaultPredictor(cfg)
         broken_slides=[]
         for wsi in [args.files]:
-            print(wsi.split('/')[-1])
+
             # try:
 
             # except Exception as e:
@@ -229,6 +229,7 @@ def predict(args):
             fileID=basename.split('/')
             dirs['fileID'] = fileID[-1]
             dirs['extension'] = extname
+            dirs['file_name'] = wsi.split('/')[-1]
 
 
             wsiMask = np.zeros([dim_y, dim_x]).astype(np.uint8)
@@ -441,7 +442,7 @@ def xml_suey(wsiMask, dirs, args, classNum, downsample,glob_offset):
     folder = args.base_dir
     girder_folder_id = folder.split('/')[-2]
     _ = os.system("printf 'Using data from girder_client Folder: {}\n'".format(folder))
-    file_name = dirs['fileID'] + dirs['extension']
+    file_name = dirs['file_name']
     print(file_name)
     gc = girder_client.GirderClient(apiUrl=args.girderApiUrl)
     gc.setToken(args.girderToken)

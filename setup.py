@@ -77,7 +77,8 @@ setup(
         'tiffslide==1.5.0',
         'tqdm==4.64.0',
         'umap-learn==0.5.3',
-
+        'openpyxl',
+        'xlrd<2',
         # dask packages
         'dask[dataframe]>=1.1.0',
         'distributed>=1.21.6',

@@ -232,7 +232,7 @@ def predict(args):
             dirs['file_name'] = wsi.split('/')[-1]
 
 
-            wsiMask = np.zeros([dim_y, dim_x]).astype(np.uint8)
+            wsiMask = np.zeros([dim_y, dim_x], dtype='uint8')
 
             index_y=np.array(range(offsety,dim_y+offsety,step))
             index_x=np.array(range(offsetx,dim_x+offsetx,step))
@@ -429,7 +429,7 @@ def xml_suey(wsiMask, dirs, args, classNum, downsample,glob_offset):
         # print output
         print('\t working on: annotationID ' + str(value))
         # get only 1 class binary mask
-        binary_mask = np.zeros(np.shape(wsiMask)).astype('uint8')
+        binary_mask = np.zeros(np.shape(wsiMask),dtype='uint8')
         binary_mask[wsiMask == value] = 1
 
         # add mask to xml

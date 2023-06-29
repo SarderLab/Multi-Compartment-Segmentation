@@ -140,9 +140,6 @@ def process_glom_features(mask_xml, glom_value, MOD, slide, mpp):
 
         mes_fraction = (pas_pixels*(mpp**2)) / area
 
-        if mask_pixels != area:
-            warnings.warn('WARNING: AREA MISMATCH')
-
         mes_fraction = pas_pixels/mask_pixels
 
         gloms[i,0] = x1

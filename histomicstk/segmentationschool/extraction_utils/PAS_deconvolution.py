@@ -1,9 +1,8 @@
 import numpy as np
 from tqdm import tqdm
 from skimage import measure
-from scipy.ndimage import label
 from skimage.color import rgb2hsv
-import warnings
+
 
 GLOM_DICT = {3:'Glomeruli',4:'Sclerotic Glomeruli'}
 

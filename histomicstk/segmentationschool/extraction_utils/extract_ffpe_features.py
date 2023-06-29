@@ -66,7 +66,7 @@ def xml_to_mask(annotations, location, size, downsample_factor=1, verbose=0):
         print('\nFOUND: ' + str(len(IDs)) + ' regions')
 
     # find regions in bounds
-    Regions = get_vertex_points(Annotations=sorted_Annotations, verbose=verbose)
+    Regions = get_vertex_points(Annotations=sorted_Annotations,IDs=IDs, verbose=verbose)
 
     # fill regions and create mask
     mask = Regions_to_mask(Regions=Regions, bounds=bounds, IDs=IDs, downsample_factor=downsample_factor, verbose=verbose)
@@ -106,25 +106,29 @@ def regions_in_mask(Annotations, bounds, verbose=1):
                     break
     return IDs
 
-def get_vertex_points(Annotations, verbose=1):
+def get_vertex_points(Annotations, IDs, verbose=1):
     Regions = []
-    for Annotation in Annotations: # for all annotations
+
+    for ID in IDs: # for all IDs
         if verbose != 0:
-            #sys.stdout.write('PARSING: ' + 'Annotation: ' + ID['annotationID'] + '\tRegion: ' + ID['regionID'])
+            sys.stdout.write('PARSING: ' + 'Annotation: ' + ID['annotationID'] + '\tRegion: ' + ID['regionID'])
             sys.stdout.flush()
             restart_line()
 
         # get all vertex attributes (points)
         Vertices = []
-        for Region in Annotation['annotation']['elements']:
-            for Vertex in Region['points']:#root.findall("./Annotation[@Id='" + ID['annotationID'] + "']/Regions/Region[@Id='" + ID['regionID'] + "']/Vertices/Vertex"):
-            # make array of points
-                Vertices.append([int(float(Vertex[0])), int(float(Vertex[1]))])
+        for Annotation in Annotations: # for all annotations
+            annotationName = Annotation['annotation']['name'].strip()
 
-
+            annotationID = NAMES_DICT[annotationName]
+            for Region in Annotation['annotation']['elements']:
+                for Vertex in Region['points']:#root.findall("./Annotation[@Id='" + ID['annotationID'] + "']/Regions/Region[@Id='" + ID['regionID'] + "']/Vertices/Vertex"):
+                    if annotationID == ID['annotationID'] and ID['regionID'] == Region['id']:
+                        Vertices.append([int(float(Vertex[0])), int(float(Vertex[1]))])    
         Regions.append(np.array(Vertices))
 
     return Regions
+
 
 def Regions_to_mask(Regions, bounds, IDs, downsample_factor, verbose=1):
     downsample = int(np.round(downsample_factor**(.5)))

@@ -289,9 +289,9 @@ def predict(args):
                         print(sys.getsizeof(im), 'second')
                         panoptic_seg, segments_info = predictor(im)["panoptic_seg"]
                         del im
-                        torch.cuda.empty_cache()
-                        print(sys.getsizeof(panoptic_seg), 'third')
-                        print(sys.getsizeof(segments_info), 'forth')
+                        # torch.cuda.empty_cache()
+                        # print(sys.getsizeof(panoptic_seg), 'third')
+                        # print(sys.getsizeof(segments_info), 'forth')
                         maskpart=decode_panoptic(panoptic_seg.to("cpu").numpy(),segments_info,'kidney',args)
                         del panoptic_seg, segments_info
                         #outImageName=basename+'_'.join(['',str(dxS),str(dyS)])
@@ -327,7 +327,7 @@ def predict(args):
                             wsiMask[dyS:dyE,dxS:dxE])
                         
                         del maskpart
-                        torch.cuda.empty_cache()
+                        # torch.cuda.empty_cache()
                         # wsiMask[dyS:dyE,dxS:dxE]=maskpart
 
             # print('showing mask')
@@ -424,8 +424,11 @@ def xml_suey(wsiMask, dirs, args, classNum, downsample,glob_offset):
     for i in range(classNum)[1:]: # exclude background class
         Annotations = xml_add_annotation(Annotations=Annotations, annotationID=i)
 
+    unique_mask = []
+    for i in range(0, len(wsiMask), 7000):
+        unique_mask.extend(np.unique(wsiMask[i:i + 7000]))
 
-    for value in np.unique(wsiMask)[1:]:
+    for value in np.unique(unique_mask)[1:]:
         # print output
         print('\t working on: annotationID ' + str(value))
         # get only 1 class binary mask

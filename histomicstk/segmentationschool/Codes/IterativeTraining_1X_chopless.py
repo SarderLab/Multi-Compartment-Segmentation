@@ -1,4 +1,6 @@
-import os, sys, cv2, time, random, warnings, argparse, csv, multiprocessing,json, detectron2
+import os, sys, cv2, time, random, warnings, argparse, csv, multiprocessing,json
+import detectron2_custom2.detectron2
+from utils import IdGenerator, id2rgb
 import numpy as np
 import matplotlib.pyplot as plt
 import lxml.etree as ET
@@ -15,18 +17,123 @@ from subprocess import call
 from get_choppable_regions import get_choppable_regions
 from PIL import Image
 
-from detectron2.utils.logger import setup_logger
+from detectron2_custom2.detectron2.utils.logger import setup_logger
 setup_logger()
-from detectron2 import model_zoo
-from detectron2.engine import DefaultPredictor,DefaultTrainer
-from detectron2.config import get_cfg
-from detectron2.utils.visualizer import Visualizer,ColorMode
-from detectron2.data import MetadataCatalog, DatasetCatalog
-from detectron2.structures import BoxMode
-from get_dataset_list import *
-from detectron2.checkpoint import DetectionCheckpointer
-from detectron2.modeling import build_model
+from detectron2_custom2.detectron2 import model_zoo
+from detectron2_custom2.detectron2.engine import DefaultPredictor,DefaultTrainer
+from detectron2_custom2.detectron2.config import get_cfg
+from detectron2_custom2.detectron2.utils.visualizer import Visualizer,ColorMode
+from detectron2_custom2.detectron2.data import MetadataCatalog, DatasetCatalog
 
+# from detectron2_custom.detectron2.checkpoint import DetectionCheckpointer
+
+from wsi_loader_utils import *
+import openslide
+from xml_to_mask_minmax import xml_to_mask
+import cv2
+from detectron2.structures import BoxMode
+
+def mask2polygons(mask):
+    annotation=[]
+    presentclasses=np.unique(mask)
+
+    offset=-2
+    presentclasses=presentclasses[presentclasses>1]
+    presentclasses=list(presentclasses[presentclasses<6])
+
+    for p in presentclasses:
+        contours, hierarchy = cv2.findContours(np.array(mask==p).astype('uint8'), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        for contour in contours:
+            if contour.size>=6:
+                instance_dict={}
+                contour_flat=contour.flatten().astype('float').tolist()
+                xMin=min(contour_flat[::2])
+                yMin=min(contour_flat[1::2])
+                xMax=max(contour_flat[::2])
+                yMax=max(contour_flat[1::2])
+                instance_dict['bbox']=[xMin,yMin,xMax,yMax]
+                instance_dict['bbox_mode']=BoxMode.XYXY_ABS
+                instance_dict['category_id']=p+offset
+                instance_dict['segmentation']=[contour_flat]
+                annotation.append(instance_dict)
+    return annotation
+
+def custom_mapper(dataset_dict):
+    # Implement a mapper, similar to the default DatasetMapper, but with your own customizations
+
+    # transform_list = [T.Resize((200,300)), T.RandomFlip(())]
+    transform_list = [T.Resize(1200,1200),
+                      T.RandomFlip(prob=0.5, horizontal=True, vertical=True),
+                      T.RandomContrast(0.8, 3),
+                      T.RandomBrightness(0.8, 1.6),
+                      ]
+    dataset_dict = copy.deepcopy(dataset_dict)  # it will be modified by code below
+    c=dataset_dict['coordinates']
+    h=dataset_dict['height']
+    w=dataset_dict['width']
+    image=np.array(openslide.OpenSlide(dataset_dict['slide_loc']).read_region((c[0],c[1]),0,(h,w)))
+    utils.check_image_size(dataset_dict, image)
+    image, transforms = T.apply_transform_gens(transform_list, image)
+    maskData=xml_to_mask(dataset_dict['xml_loc'], c, [h,w])
+    dataset_dict['annotations']=mask2polygons(maskData)
+
+    annos = [
+        utils.transform_instance_annotations(obj, transforms, image.shape[:2])
+        for obj in dataset_dict.pop("annotations")
+    ]
+    instances = utils.annotations_to_instances(annos, image.shape[:2])
+    dataset_dict["instances"] = utils.filter_empty_instances(instances)
+
+
+
+
+
+
+
+      sem_seg_gt=np.array(maskData==1).astype('uint8')
+
+      aug_input = T.AugInput(image, sem_seg=sem_seg_gt)
+      transforms = self.augmentations(aug_input)
+      image, sem_seg_gt = aug_input.image, aug_input.sem_seg
+
+      image_shape = image.shape[:2]  # h, w
+      # Pytorch's dataloader is efficient on torch.Tensor due to shared-memory,
+      # but not efficient on large generic data structures due to the use of pickle & mp.Queue.
+      # Therefore it's important to use torch.Tensor.
+      dataset_dict["image"] = torch.as_tensor(np.ascontiguousarray(image.transpose(2, 0, 1)))
+      if sem_seg_gt is not None:
+          dataset_dict["sem_seg"] = torch.as_tensor(sem_seg_gt.astype("long"))
+
+      # USER: Remove if you don't use pre-computed proposals.
+      # Most users would not need this feature.
+      if self.proposal_topk is not None:
+          utils.transform_proposals(
+              dataset_dict, image_shape, transforms, proposal_topk=self.proposal_topk
+          )
+
+      if not self.is_train:
+          # USER: Modify this if you want to keep them for some reason.
+          dataset_dict.pop("annotations", None)
+          dataset_dict.pop("sem_seg_file_name", None)
+          return dataset_dict
+
+      if "annotations" in dataset_dict:
+          self._transform_annotations(dataset_dict, transforms, image_shape)
+
+      return dataset_dict
+
+# use this dataloader instead of the default
+class CustomTrainer(DefaultTrainer):
+    @classmethod
+    def build_test_loader(cls, cfg: CfgNode, dataset_name):
+        return build_detection_test_loader(cfg, dataset_name, mapper=custom_mapper)
+
+    @classmethod
+    def build_train_loader(cls, cfg: CfgNode):
+        return build_detection_train_loader(cfg, mapper=custom_mapper)
+trainer = CustomTrainer(cfg)
+trainer.resume_or_load(resume=False)
+trainer.train()
 """
 
 Code for - cutting / augmenting / training CNN
@@ -46,9 +153,9 @@ def IterateTraining(args):
     region_sizeLR = int(args.boxSizeLR*(downsampleLR)) #Region size before downsampling
     stepLR = int(region_sizeLR*(1-args.overlap_percentLR)) #Step size before downsampling
     ## calculate low resolution block params
-    downsampleHR = int(args.downsampleRateHR**.5) #down sample for each dimension
-    region_sizeHR = int(args.boxSizeHR*(downsampleHR)) #Region size before downsampling
-    stepHR = int(region_sizeHR*(1-args.overlap_percentHR)) #Step size before downsampling
+    downsample = int(args.downsampleRate**.5) #down sample for each dimension
+    region_size = int(args.boxSize*(downsample)) #Region size before downsampling
+    step = int(region_size*(1-args.overlap_percent)) #Step size before downsampling
 
 
     global classNum_HR,classEnumLR,classEnumHR
@@ -76,7 +183,7 @@ def IterateTraining(args):
     # currentAnnotationIteration=check_model_generation(dirs)
     currentAnnotationIteration=0
     print('Current training session is: ' + str(currentAnnotationIteration))
-
+    dirs['xml_dir']=dirs['basedir'] + dirs['project'] + dirs['training_data_dir'] + str(currentAnnotationIteration) + '/'
     ##Create objects for storing class distributions
     annotatedXMLs=glob.glob(dirs['basedir'] + dirs['project'] + dirs['training_data_dir'] + str(currentAnnotationIteration) + '/*.xml')
     classes=[]
@@ -96,169 +203,9 @@ def IterateTraining(args):
 
     classNum_HR=args.classNum
 
-    ##for all WSIs in the initiating directory:
-    if args.chop_data == 'True':
-        print('Chopping')
-
-        start=time.time()
-        size_data=[]
-
-        for xmlID in annotatedXMLs:
-
-            #Get unique name of WSI
-            fileID=xmlID.split('/')[-1].split('.xml')[0]
-            print('-----------------'+fileID+'----------------')
-            #create memory addresses for wsi files
-            for ext in [args.wsi_ext]:
-                wsiID=dirs['basedir'] + dirs['project']+  dirs['training_data_dir'] + str(currentAnnotationIteration) +'/'+ fileID + ext
-
-                #Ensure annotations exist
-                if os.path.isfile(wsiID)==True:
-                    break
+    train_dset = WSITrainingLoader(args,dirs['basedir'] + dirs['project'] + dirs['training_data_dir'] + str(currentAnnotationIteration))
 
 
-            #Load openslide information about WSI
-            if ext != '.tif':
-                slide=getWsi(wsiID)
-                #WSI level 0 dimensions (largest size)
-                dim_x,dim_y=slide.dimensions
-            else:
-                im = Image.open(wsiID)
-                dim_x, dim_y=im.size
-
-            if args.box_supervision:
-                location=[0,0]
-                size=[dim_x,dim_y]
-                tree = ET.parse(xmlID)
-                root = tree.getroot()
-
-                box_supervision_layers=['9']
-                print('Box supervision layer')
-                print(box_supervision_layers)
-                # calculate region bounds
-                global_bounds = {'x_min' : location[0], 'y_min' : location[1], 'x_max' : location[0] + size[0], 'y_max' : location[1] + size[1]}
-                local_bounds = get_supervision_boxes(root,box_supervision_layers)
-                num_cores = multiprocessing.cpu_count()
-
-                Parallel(n_jobs=num_cores)(delayed(chop_suey_bounds)(args=args,wsiID=wsiID,
-                    dirs=dirs,lb=lb,xmlID=xmlID,box_supervision_layers=box_supervision_layers) for lb in tqdm(local_bounds))
-
-            else:
-                if fileID=='K1300466_6_PAS_05082017_001':
-                    t=time.time()
-
-                    wsi_mask=xml_to_mask(xmlID, [0,0], [87519,44938])
-                    wsi_mask=wsi_mask[:,0:36000]
-                    print('Time for mask generation ' + str(time.time()-t))
-                    print('Restricted mask for ' + fileID)
-
-
-                elif fileID=='K1300473_4_PAS_05082017_001_003':
-                    t=time.time()
-
-                    wsi_mask=xml_to_mask(xmlID, [0,0], [128600,46112])
-                    wsi_mask=wsi_mask[:,0:60000]
-                    print('Time for mask generation ' + str(time.time()-t))
-                    print('Restricted mask for ' + fileID)
-
-                else:
-                    t=time.time()
-                    wsi_mask=xml_to_mask(xmlID, [0,0], [dim_x,dim_y])
-                    print('Time for mask generation ' + str(time.time()-t))
-
-                # wsi_mask=xml_to_mask(xmlID, [0,0], [dim_x,dim_y])
-
-                #Enumerate cpu core count
-                num_cores = multiprocessing.cpu_count()
-
-                #Generate iterators for parallel chopping of WSIs in high resolution
-
-                index_yHR=np.array(range(0,dim_y,stepHR))
-                index_xHR=np.array(range(0,dim_x,stepHR))
-                #Make sure python doesn't forget about our end blocks
-                index_yHR[-1]=dim_y-stepHR
-                index_xHR[-1]=dim_x-stepHR
-                #Create memory address for chopped images high resolution
-                outdirHR=dirs['basedir'] + dirs['project'] + dirs['tempdirHR']
-
-                #Perform high resolution chopping in parallel and return the number of
-                #images in each of the labeled classes
-                chop_regions=get_choppable_regions(wsi=wsiID,
-                    index_x=index_xHR,index_y=index_yHR,boxSize=region_sizeHR,white_percent=args.white_percent)
-
-                Parallel(n_jobs=num_cores)(delayed(return_region)(args=args,
-                    wsi_mask=wsi_mask, wsiID=wsiID,
-                    fileID=fileID, yStart=j, xStart=i, idxy=idxy,
-                    idxx=idxx, downsampleRate=args.downsampleRateHR,
-                    outdirT=outdirHR, region_size=region_sizeHR,
-                    dirs=dirs, chop_regions=chop_regions,classNum_HR=classNum_HR) for idxx,i in enumerate(index_xHR) for idxy,j in enumerate(index_yHR))
-
-
-            '''
-            wsi_mask=xml_to_mask(xmlID, [0,0], [dim_x,dim_y])
-
-
-
-            #Enumerate cpu core count
-            num_cores = multiprocessing.cpu_count()
-
-            #Generate iterators for parallel chopping of WSIs in high resolution
-            #index_yHR=range(30240,dim_y-stepHR,stepHR)
-            #index_xHR=range(840,dim_x-stepHR,stepHR)
-            index_yHR=range(0,dim_y,stepHR)
-            index_xHR=range(0,dim_x,stepHR)
-            index_yHR[-1]=dim_y-stepHR
-            index_xHR[-1]=dim_x-stepHR
-            #Create memory address for chopped images high resolution
-            outdirHR=dirs['basedir'] + dirs['project'] + dirs['tempdirHR']
-
-            #Perform high resolution chopping in parallel and return the number of
-            #images in each of the labeled classes
-            chop_regions=get_choppable_regions(wsi=wsiID,
-                index_x=index_xHR,index_y=index_yHR,boxSize=region_sizeHR,white_percent=args.white_percent)
-
-            Parallel(n_jobs=num_cores)(delayed(return_region)(args=args,
-                wsi_mask=wsi_mask, wsiID=wsiID,
-                fileID=fileID, yStart=j, xStart=i, idxy=idxy,
-                idxx=idxx, downsampleRate=args.downsampleRateHR,
-                outdirT=outdirHR, region_size=region_sizeHR,
-                dirs=dirs, chop_regions=chop_regions,classNum_HR=classNum_HR) for idxx,i in enumerate(index_xHR) for idxy,j in enumerate(index_yHR))
-
-            #for idxx,i in enumerate(index_xHR):
-            #    for idxy,j in enumerate(index_yHR):
-            #        if chop_regions[idxy,idxx] != 0:
-            #            return_region(args=args,xmlID=xmlID, wsiID=wsiID, fileID=fileID, yStart=j, xStart=i,idxy=idxy, idxx=idxx,
-            #            downsampleRate=args.downsampleRateHR,outdirT=outdirHR, region_size=region_sizeHR, dirs=dirs,
-            #            chop_regions=chop_regions,classNum_HR=classNum_HR)
-            #        else:
-            #            print('pass')
-
-
-        # exit()
-        print('Time for WSI chopping: ' + str(time.time()-start))
-
-        classEnumHR=np.ones([classNum_HR,1])*classNum_HR
-
-        ##High resolution augmentation
-        #Enumerate high resolution class distribution
-        classDistHR=np.zeros(len(classEnumHR))
-        for idx,value in enumerate(classEnumHR):
-            classDistHR[idx]=value/sum(classEnumHR)
-        print(classDistHR)
-        #Define number of augmentations per class
-
-        moveimages(dirs['basedir']+dirs['project'] + dirs['tempdirHR'] + '/regions/', dirs['basedir']+dirs['project'] + '/Permanent/HR/regions/')
-        moveimages(dirs['basedir']+dirs['project'] + dirs['tempdirHR'] + '/masks/',dirs['basedir']+dirs['project'] + '/Permanent/HR/masks/')
-
-
-        #Total time
-        print('Time for high resolution augmenting: ' + str((time.time()-totalStart)/60) + ' minutes.')
-        '''
-
-    # with open('sizes.csv','w',newline='') as myfile:
-    #     wr=csv.writer(myfile,quoting=csv.QUOTE_ALL)
-    #     wr.writerow(size_data)
-    # pretrain_HR=get_pretrain(currentAnnotationIteration,'/HR/',dirs)
 
     modeldir_HR = dirs['basedir']+dirs['project'] + dirs['modeldir'] + str(currentAnnotationIteration+1) + '/HR/'
 
@@ -299,25 +246,46 @@ def IterateTraining(args):
     rand_sample=True
     json_dir=dirs['basedir']+'/'+dirs['project'] + '/Permanent/HR/'
     json_file=json_dir+'detectron_train'
-    if args.prepare_detectron_json:
-        HAIL2Detectron(img_dir,rand_sample,json_file,classnames,isthing,xml_color,organType,dirs)
+    classes={}
+
+    for idx,c in enumerate(classnames):
+        classes[idx]={'isthing':isthing[idx],'color':xml_color[idx]}
+    IdGen=IdGenerator(classes)
+
+
+    # if args.prepare_detectron_json:
+    #     HAIL2Detectron(img_dir,rand_sample,json_file,classnames,isthing,xml_color,organType,dirs)
 
     #### From json
-    DatasetCatalog.register("my_dataset", lambda:samples_from_json(json_file,rand_sample))
+    # DatasetCatalog.register("my_dataset", lambda:samples_from_json(json_file,rand_sample))
+    DatasetCatalog.register("my_dataset", lambda:train_samples_from_WSI(train_dset,1000,args,json_file,classnames,isthing,xml_color,organType,dirs))
     MetadataCatalog.get("my_dataset").set(thing_classes=tc)
     MetadataCatalog.get("my_dataset").set(stuff_classes=sc)
-
-    seg_metadata=MetadataCatalog.get("my_dataset")
-
+    # exit()
+    # seg_metadata=MetadataCatalog.get("my_dataset")
+    #
     #
     # new_list = DatasetCatalog.get("my_dataset")
     # print(len(new_list))
-    # for d in random.sample(new_list, 10000):
-    #     ident=d["file_name"].split('/')[-1]
-    #     print(ident)
-    #     img = cv2.imread(d["file_name"])
-    #     visualizer = Visualizer(img[:, :, ::-1],metadata=seg_metadata, scale=0.5)
-    #     out = visualizer.draw_dataset_dict(d)
+    # for d in random.sample(new_list, 1000):
+    #     # ident=d["file_name"].split('/')[-1]
+    #     # print(ident)
+    #     c=d['coordinates']
+    #     h=d['height']
+    #     w=d['width']
+    #     slide=openslide.OpenSlide(d['slide_loc'])
+    #     x=dirs['xml_dir']+'_'.join(d['image_id'].split('_')[:-2])+'.xml'
+    #     img=np.array(slide.read_region((c[0],c[1]),0,(h,w)))
+    #     slide.close()
+    #     # mask=xml_to_mask(x, c, [h,w])
+    #     # plt.subplot(121)
+    #     # plt.imshow(im)
+    #     # plt.subplot(122)
+    #     # plt.imshow(mask)
+    #     # plt.show()
+    #     # img = cv2.imread(d["file_name"])
+    #     visualizer = Visualizer(img[:, :, ::-1],metadata=seg_metadata, scale=0.5,idgen=IdGen)
+    #     out = visualizer.draw_dataset_dict(d,train_dset)
     #     cv2.namedWindow("output", cv2.WINDOW_NORMAL)
     #     cv2.imshow("output",out.get_image()[:, :, ::-1])
     #     cv2.waitKey(0) # waits until a key is pressed
@@ -376,8 +344,9 @@ def IterateTraining(args):
 
     cfg.DATALOADER.FILTER_EMPTY_ANNOTATIONS=False
     cfg.INPUT.MIN_SIZE_TRAIN=0
+    # cfg.XML_DIR=dirs['xml_dir']
     # cfg.INPUT.MAX_SIZE_TRAIN=500
-
+    # mapper=DatasetMapper(cfg, True,train_dset)
     # exit()
     os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
     with open(cfg.OUTPUT_DIR+"/config_record.yaml", "w") as f:

@@ -1,8 +1,8 @@
-# import numpy as np
+import numpy as np
 
 from skimage.color import rgb2hsv,hsv2rgb,rgb2lab,lab2rgb
-# import matplotlib as plt
-# import cv2
+import matplotlib as plt
+import cv2
 from skimage import exposure
 
 def randomHSVshift(x,hShift,lShift):

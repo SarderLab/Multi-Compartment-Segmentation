@@ -1,10 +1,10 @@
 import numpy as np
-from .getWsi import getWsi
-from .xml_to_mask import xml_to_mask
+import getWsi
+from xml_to_mask import xml_to_mask
 from joblib import Parallel, delayed
 import multiprocessing
 from glob import glob
-# from matplotlib import pyplot as plt
+from matplotlib import pyplot as plt
 from PIL import Image
 #def get_network_performance(WSI_location,xml_annotation,xml_prediction):
 block_size=2000
@@ -12,7 +12,7 @@ anotDir='/home/bgbl/H-AI-L/IFTAKuang/Annotations/'
 predDir='/home/bgbl/H-AI-L/IFTAKuang/TRAINING_data/1/Predicted_XMLs/'
 dataDir='/home/bgbl/H-AI-L/IFTAKuang/wsi/'
 txtDir='/home/bgbl/H-AI-L/IFTAKuang/'
-savelist=[]
+savelist=[];
 f_name1=txtDir + 'performance.txt'
 f1=open(f_name1,'w')
 f1.close()
@@ -37,7 +37,7 @@ def get_perf(wsi,xml1,xml2,args):
     #specs=inspect_mask(index_y[0],index_x[0],block_size,xml_annotation,xml_prediction)
 
     if args.wsi_ext != '.tif':
-        WSIinfo=getWsi(wsi)
+        WSIinfo=getWsi.getWsi(wsi)
         dim_x, dim_y=WSIinfo.dimensions
     else:
         im = Image.open(wsi)

@@ -4,7 +4,7 @@ import sys
 import numpy as np
 import time
 
-sys.path.append('..')
+sys.path.append(os.getcwd()+'/Codes')
 
 
 """
@@ -28,12 +28,6 @@ main code for training semantic segmentation of WSI iteratively
 
 """
 
-# def get_girder_client(args):
-#     gc = girder_client.GirderClient(apiUrl=args.girderApiUrl)
-#     gc.setToken(args.girderToken)
-    
-#     return gc
-
 def str2bool(v):
     if isinstance(v, bool):
         return v
@@ -44,27 +38,25 @@ def str2bool(v):
     else:
         raise argparse.ArgumentTypeError('Boolean value expected.')
 
-
 def main(args):
 
-    from segmentationschool.Codes.InitializeFolderStructure import initFolder, purge_training_set, prune_training_set
-    # from extract_reference_features import getKidneyReferenceFeatures,summarizeKidneyReferenceFeatures
-    # from TransformXMLs import splice_cortex_XMLs,register_aperio_scn_xmls
-    # from randomCropGenerator import randomCropGenerator
+    from InitializeFolderStructure import initFolder, purge_training_set, prune_training_set
+    from TransformXMLs import transform_XMLs
+    # from extract_reference_features import extractKidneyReferenceFeatures
     if args.one_network == True:
-        from segmentationschool.Codes.IterativeTraining_1X import IterateTraining
-        from segmentationschool.Codes.IterativePredict_1X import predict
+        from IterativeTraining_1X_chopless_test import IterateTraining
+        from IterativePredict_1X import predict, validate
     else:
-        from segmentationschool.Codes.evolve_predictions import evolve
-        from segmentationschool.Codes.IterativeTraining import IterateTraining
-        from segmentationschool.Codes.IterativePredict import predict
+        from evolve_predictions import evolve
+        from IterativeTraining import IterateTraining
+        from IterativePredict import predict, validate
 
     # for teaching young segmentations networks
     starttime = time.time()
-    # if args.project == ' ':
-    #     print('Please specify the project name: \n\t--project [folder]')
+    if args.project == ' ':
+        print('Please specify the project name: \n\t--project [folder]')
 
-    if args.option in ['new', 'New']:
+    elif args.option in ['new', 'New']:
         initFolder(args=args)
         savetime(args=args, starttime=starttime)
     elif args.option in ['train', 'Train']:
@@ -73,44 +65,33 @@ def main(args):
     elif args.option in ['predict', 'Predict']:
         predict(args=args)
         savetime(args=args, starttime=starttime)
-
+    elif args.option in ['validate', 'Validate']:
+        validate(args=args)
     elif args.option in ['evolve', 'Evolve']:
         evolve(args=args)
     elif args.option in ['purge', 'Purge']:
         purge_training_set(args=args)
     elif args.option in ['prune', 'Prune']:
         prune_training_set(args=args)
-    elif args.option in ['get_features', 'Get_features']:
-        getKidneyReferenceFeatures(args=args)
-    elif args.option in ['summarize_features', 'Summarize_features']:
-        summarizeKidneyReferenceFeatures(args=args)
-    elif args.option in ['splice_cortex', 'Splice_cortex']:
-        splice_cortex_XMLs(args=args)
-    elif args.option in ['register_aperio_scn_xmls', 'Register_aperio_scn_xmls']:
-        register_aperio_scn_xmls(args=args)
-    elif args.option in ['get_thumbnails', 'Get_thumbnails']:
-        from wsi_loader_utils import get_image_thumbnails
-        get_image_thumbnails(args)
-    elif args.option in ['random_patch_crop', 'random_patch_crop']:
-        randomCropGenerator(args=args)
+    elif args.option in ['transform_xmls', 'Transform_xmls']:
+        transform_XMLs(args=args)
+    elif args.option in ['extract_features', 'Extract_features']:
+        extractKidneyReferenceFeatures(args=args)
 
     else:
-        print('please specify an option in: \n\t--option [new, train, predict, validate, evolve, purge, prune, get_features, splice_cortex, register_aperio_scn_xmls]')
+        print('please specify an option in: \n\t--option [new, train, predict, validate]')
 
 
 def savetime(args, starttime):
     if args.option in ['new', 'New']:
-        print('new')
-        # with open(args.runtime_file, 'w') as timefile:
-        #     timefile.write('option' +'\t'+ 'time' +'\t'+ 'epochs_LR' +'\t'+ 'epochs_HR' +'\t'+ 'aug_LR' +'\t'+ 'aug_HR' +'\t'+ 'overlap_percentLR' +'\t'+ 'overlap_percentHR')
+        with open(args.base_dir + '/' + args.project + '/runtime.txt', 'w') as timefile:
+            timefile.write('option' +'\t'+ 'time' +'\t'+ 'epochs_LR' +'\t'+ 'epochs_HR' +'\t'+ 'aug_LR' +'\t'+ 'aug_HR' +'\t'+ 'overlap_percentLR' +'\t'+ 'overlap_percentHR')
     if args.option in ['train', 'Train']:
-        print('not much')
-        # with open(args.runtime_file, 'a') as timefile:
-        #     timefile.write('\n' + args.option +'\t'+ str(time.time()-starttime) +'\t'+ str(args.epoch_LR) +'\t'+ str(args.epoch_HR) +'\t'+ str(args.aug_LR) +'\t'+ str(args.aug_HR) +'\t'+ str(args.overlap_percentLR) +'\t'+ str(args.overlap_percentHR))
+        with open(args.base_dir + '/' + args.project + '/runtime.txt', 'a') as timefile:
+            timefile.write('\n' + args.option +'\t'+ str(time.time()-starttime) +'\t'+ str(args.epoch_LR) +'\t'+ str(args.epoch_HR) +'\t'+ str(args.aug_LR) +'\t'+ str(args.aug_HR) +'\t'+ str(args.overlap_percentLR) +'\t'+ str(args.overlap_percentHR))
     if args.option in ['predict', 'Predict']:
-        print('predict')
-        # with open(args.runtime_file, 'a') as timefile:
-        #     timefile.write('\n' + args.option +'\t'+ str(time.time()-starttime))
+        with open(args.base_dir + '/' + args.project + '/runtime.txt', 'a') as timefile:
+            timefile.write('\n' + args.option +'\t'+ str(time.time()-starttime))
 
 
 if __name__ == '__main__':
@@ -118,12 +99,8 @@ if __name__ == '__main__':
 
     ##### Main params (MANDITORY) ##############################################
     # School subject
-    parser.add_argument('--girderApiUrl', dest='girderApiUrl', default=' ' ,type=str,
-        help='girderApiUrl')
-    parser.add_argument('--girderToken', dest='girderToken', default=' ' ,type=str,
-        help='girderToken')
-    parser.add_argument('--files', dest='files', default=' ' ,type=str,
-        help='files')
+    parser.add_argument('--project', dest='project', default=' ' ,type=str,
+        help='Starting directory to contain training project')
     # option
     parser.add_argument('--option', dest='option', default=' ' ,type=str,
         help='option for [new, train, predict, validate]')
@@ -131,46 +108,12 @@ if __name__ == '__main__':
         help='name of project for transfer learning [pulls the newest model]')
     parser.add_argument('--one_network', dest='one_network', default=True ,type=bool,
         help='use only high resolution network for training/prediction/validation')
-    parser.add_argument('--target', dest='target', default=None,type=str,
-        help='directory with xml transformation targets')
-    parser.add_argument('--cortextarget', dest='cortextarget', default=None,type=str,
-        help='directory with cortex annotations for splicing')
-    parser.add_argument('--output', dest='output', default=None,type=str,
-        help='directory to save output transformed XMLs')
-    parser.add_argument('--wsis', dest='wsis', default=None,type=str,
-        help='directory of WSIs for reference feature extraction')
-    parser.add_argument('--groupBy', dest='groupBy', default=None,type=str,
-        help='Name for histomicsUI converted annotation group')
-    parser.add_argument('--patientData', dest='patientData', default=None,type=str,
-        help='Location of excel file containing clinical data on patients')
-    parser.add_argument('--labelColumns', dest='labelColumns', default=None,type=str,
-        help='Column in excel file to use as label')
-    parser.add_argument('--labelModality', dest='labelModality', default=None,type=str,
-        help='Column in excel file to use as label')
-    parser.add_argument('--IDColumn', dest='IDColumn', default='Label_slides',type=str,
-        help='Excel column with file name links')
-    parser.add_argument('--plotFill', dest='plotFill', default=True,type=str2bool,
-        help='Excel column with file name links')
-    parser.add_argument('--scatterFeatures', dest='scatterFeatures', default='5,6',type=str,
-        help='Excel column with file name links')
-    parser.add_argument('--anchor', dest='anchor', default='Age',type=str,
-        help='Biometric link data for scatterplot')
-    parser.add_argument('--exceloutfile', dest='exceloutfile', default=None,type=str,
-        help='Name of output excel file for feature aggregation')
-
-
-# args.huelabel,args.rowlabel,args.binRows
-    parser.add_argument('--SummaryOption', dest='SummaryOption', default=None,type=str,
-        help='What type of feature summary to generate, options:\n'+
-            'BLDensity,ULDensity,UDensity,BDensity,standardScatter,anchorScatter')
 
     # automatically generated
     parser.add_argument('--base_dir', dest='base_dir', default=os.getcwd(),type=str,
         help='base directory of code folder')
-
-    parser.add_argument('--code_dir', dest='code_dir', default=os.getcwd(),type=str,
-        help='base directory of code folder')
-
+    parser.add_argument('--target', dest='target', default=None,type=str,
+        help='directory to transform xmls')
 
     ##### Args for training / prediction ####################################################
     parser.add_argument('--gpu_num', dest='gpu_num', default=2 ,type=int,
@@ -195,7 +138,7 @@ if __name__ == '__main__':
     parser.add_argument('--white_percent', dest='white_percent', default=0.01 ,type=float,
         help='white level checkpoint for chopping')
     parser.add_argument('--chop_thumbnail_resolution', dest='chop_thumbnail_resolution', default=16,type=int,
-        help='downsample mask to find usable regions')
+        help='Amount of downsampling in each dimension to determine usable tissue regions')
     #Low resolution parameters
     parser.add_argument('--overlap_percentLR', dest='overlap_percentLR', default=0.5 ,type=float,
         help='overlap percentage of low resolution blocks [0-1]')
@@ -204,16 +147,24 @@ if __name__ == '__main__':
     parser.add_argument('--downsampleRateLR', dest='downsampleRateLR', default=16 ,type=int,
         help='reduce image resolution to 1/downsample rate')
     #High resolution parameters
-    parser.add_argument('--overlap_percentHR', dest='overlap_percentHR', default=0 ,type=float,
+    parser.add_argument('--overlap_rate', dest='overlap_rate', default=0.5 ,type=float,
         help='overlap percentage of high resolution blocks [0-1]')
-    parser.add_argument('--boxSize', dest='boxSize', default=2048 ,type=int,
+    parser.add_argument('--boxSize', dest='boxSize', default=1200 ,type=int,
         help='size of high resolution blocks')
-    parser.add_argument('--downsampleRateHR', dest='downsampleRateHR', default=1 ,type=int,
+    parser.add_argument('--downsampleRate', dest='downsampleRate', default=1 ,type=int,
         help='reduce image resolution to 1/downsample rate')
     parser.add_argument('--training_max_size', dest='training_max_size', default=512 ,type=int,
         help='padded region for low resolution region extraction')
-    parser.add_argument('--Mag20X', dest='Mag20X', default=False,type=str2bool,
-        help='Perform prediction for 20X (true) slides rather than 40X (false)')
+    parser.add_argument('--box_supervision', dest='box_supervision', default=True,type=str2bool,
+        help='Use rectangle annotations to confine chopping')
+    parser.add_argument('--chop_with_replacement', dest='chop_with_replacement', default=False,type=str2bool,
+        help='make ultimate contour class ID equal to dot-based ID')
+    parser.add_argument('--standard_chop', dest='standard_chop', default=True,type=str2bool,
+        help='use contour class ID as defined by the region itself')
+    parser.add_argument('--get_new_tissue_masks', dest='get_new_tissue_masks', default=False,type=str2bool,
+        help="Don't load usable tisse regions from disk, create new ones")
+    parser.add_argument('--balanceClasses', dest='balanceClasses', default='3,4,6',type=str,
+        help="which classes to balance during training")
 
     ### Params for augmenting data ###
     #High resolution
@@ -233,8 +184,11 @@ if __name__ == '__main__':
     parser.add_argument('--CNNbatch_sizeLR', dest='CNNbatch_sizeLR', default=2 ,type=int,
         help='Size of batches for training low resolution CNN')
     #High resolution hyperparameters
-    parser.add_argument('--CNNbatch_sizeHR', dest='CNNbatch_sizeHR', default=2 ,type=int,
+    parser.add_argument('--batch_size', dest='batch_size', default=3 ,type=int,
         help='Size of batches for training high resolution CNN')
+    parser.add_argument('--train_steps', dest='train_steps', default=300000 ,type=int,
+        help='Size of batches for training high resolution CNN')
+    #Hyperparameters
     #Hyperparameters
     parser.add_argument('--epoch_LR', dest='epoch_LR', default=1 ,type=int,
         help='training epochs for low resolution network')
@@ -246,17 +200,24 @@ if __name__ == '__main__':
         type=float, help='High rez learning rate')
     parser.add_argument('--learning_rate_LR', dest='learning_rate_LR', default=2.5e-4,
         type=float, help='Low rez learning rate')
-    parser.add_argument('--chop_data', dest='chop_data', default='false',
-        type=str, help='chop and augment new data before training')
+
     parser.add_argument('--crop_detectron_trainset', dest='crop_detectron_trainset', default=False,type=str2bool,
         help='chop dot based images to this max size')
     parser.add_argument('--predict_data', dest='predict_data', default=True,type=str2bool,
         help='chop dot based images to this max size')
-    parser.add_argument('--roi_thresh', dest='roi_thresh', default=0.01,type=float,
+    parser.add_argument('--roi_thresh', dest='roi_thresh', default=0.7,type=float,
         help='chop dot based images to this max size')
+    parser.add_argument('--prepare_detectron_json', dest='prepare_detectron_json', default=True,type=str2bool,
+        help='chop dot based images to this max size')
+    parser.add_argument('--custom_image_means', dest='custom_image_means', default=False,type=str2bool,
+        help='measure image mean for network training')
+    parser.add_argument('--check_training_data', dest='check_training_data', default=False,type=str2bool,
+        help='check images visually before training')
+    parser.add_argument('--hsv_aug_prob', dest='hsv_aug_prob', default=0.1,type=float,
+        help='if rand (0,1) > hsv_aug_prob, apply aug to this image')
 
     ### Params for saving results ###
-    parser.add_argument('--outDir', dest='outDir', default='Predictions' ,type=str,
+    parser.add_argument('--outDir', dest='outDir', default='/Predictions/' ,type=str,
         help='output directory')
     parser.add_argument('--save_outputs', dest='save_outputs', default=False ,type=bool,
         help='save outputs from chopping etc. [final image masks]')
@@ -273,15 +234,12 @@ if __name__ == '__main__':
 
 
     ### Params for optimizing wsi mask cleanup ###
-    parser.add_argument('--min_size', dest='min_size', default=[30,30,24000,24000,10,10] ,type=int,
+    parser.add_argument('--min_size', dest='min_size', default=[0,30,30,30,30] ,type=int,
         help='min size region to be considered after prepass [in pixels]')
-    parser.add_argument('--bordercrop', dest='bordercrop', default=300 ,type=int,
+    parser.add_argument('--bordercrop', dest='bordercrop', default=200 ,type=int,
         help='min size region to be considered after prepass [in pixels]')
     parser.add_argument('--LR_region_pad', dest='LR_region_pad', default=50 ,type=int,
         help='padded region for low resolution region extraction')
-    parser.add_argument('--show_interstitium', dest='show_interstitium', default=True ,type=str2bool,
-        help='padded region for low resolution region extraction')
-
 
 
 

@@ -9,7 +9,7 @@ import multiprocessing
 from skimage.io import imread, imsave
 from skimage.transform import resize
 from scipy.ndimage.measurements import label
-# from skimage.segmentation import clear_border
+from skimage.segmentation import clear_border
 from skimage.morphology import remove_small_objects
 import lxml.etree as ET
 import warnings

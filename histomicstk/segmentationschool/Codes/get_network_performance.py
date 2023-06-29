@@ -1,13 +1,13 @@
 import numpy as np
-from .getWsi import getWsi
-from .xml_to_mask import xml_to_mask
-# from joblib import Parallel, delayed
-# import multiprocessing
+import getWsi
+from xml_to_mask import xml_to_mask
+from joblib import Parallel, delayed
+import multiprocessing
 from PIL import Image
 
 def get_perf(wsi,xml1,xml2,args):
     if args.wsi_ext != '.tif':
-        WSIinfo=getWsi(wsi)
+        WSIinfo=getWsi.getWsi(wsi)
         dim_x, dim_y=WSIinfo.dimensions
     else:
         im = Image.open(wsi)

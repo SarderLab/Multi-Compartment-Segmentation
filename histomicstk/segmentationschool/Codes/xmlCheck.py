@@ -1,5 +1,5 @@
-from .xml_to_mask import xml_to_mask
-from .getWsi import getWsi
+from xml_to_mask import xml_to_mask
+from getWsi import getWsi
 from matplotlib import pyplot as plt
 
 slide=getWsi('/hdd/bg/HAIL2/DeepZoomPrediction/TRAINING_data/0/52483.svs')

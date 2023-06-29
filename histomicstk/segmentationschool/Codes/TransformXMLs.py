@@ -1,15 +1,11 @@
-import os,cv2 # sys, time
+import os, sys, cv2, time
 import numpy as np
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import lxml.etree as ET
-# from matplotlib import path
+from matplotlib import path
 import glob
-from .xml_to_mask_minmax import get_annotated_ROIs,xml_to_mask,write_minmax_to_xml
-import openslide
-from .XML_to_Json_cortex import convert_xml_json
-import json
-# import copy
-# from tqdm import tqdm
+from xml_to_mask_minmax import get_annotated_ROIs,xml_to_mask,write_minmax_to_xml
+
 
 def transform_XMLs(args):
     xml_color = [65280, 65535, 255, 16711680, 33023]
@@ -37,165 +33,9 @@ def transform_XMLs(args):
             # plt.show()
             xml_suey(xmlpart,xmloutname,args.classNum,downsample=args.downsampleRate,glob_offset=[0,0],xml_color=xml_color)
 
-def splice_cortex_XMLs(args):
-    xml_color = [65280,65535,16776960,255, 16711680, 33023]
-    assert args.target is not None, 'You must provide the directory of XMLs to splice cortex into with --target /path/to/xmls'
-    assert args.cortextarget is not None, 'You must provide the directory with cortex XMLs with --cortextarget /path/to/xmls'
-    assert args.output is not None, 'You must provide the directory for output XMLS with --output /path/to/save/location'
-    baseXMLs=glob.glob(os.path.join(args.target, "*.xml"))
-    corteXMLs=glob.glob(os.path.join(args.cortextarget, "*.xml"))
-    output_path=args.output
-    if args.groupBy is None:
-        groupAnnotationsBy='Annotations'
-    else:
-        groupAnnotationsBy=args.groupBy
-    if not os.path.isdir(args.output):
-        print('Creating output folder: ' + args.output)
-        os.makedirs(args.output)
-
-    for xml in baseXMLs:
-        print(xml,end='\n',flush=True)
-        cortexxml=os.path.join(args.cortextarget,xml.split('/')[-1])
-        newxmlpath=os.path.join(args.output,xml.split('/')[-1])
-        try:
-            write_minmax_to_xml(cortexxml)
-        except Exception as e:
-            print(e)
-            exit()
-        write_minmax_to_xml(xml)
-        basetree = ET.parse(xml)
-        baseroot = basetree.getroot()
-        cortextree = ET.parse(cortexxml)
-        cortexroot = cortextree.getroot()
-        # print('\n')
-        # print(len(cortexroot))
-        # print(cortexroot[0].tag)
-        # exit()
-        Annotations_new=xml_create()
-        for i in range(1,7):
-            Annotations_new = xml_add_annotation(Annotations=Annotations_new,xml_color=xml_color,annotationID=i)
-        #
-        #     if i in [1,2]:
-        #         Annotation = cortexroot.find("Annotation[@Id='" + str(i) + "']")
-        #         # Annotations_new=ET.SubElement(Annotations_new,ET.tostring(Annotation, pretty_print=True))
-        #         Annotations_new.append(Annotation)
-        #
-        #     else:
-        #         Annotation = baseroot.find("Annotation[@Id='" + str(i-1) + "']")
-        #
-        #         Annotation.attrib['Id']=str(i)
-        #          # Annotation.attrib['Id']
-        #         # Annotations_new.append(Annotation)
-        #         Annotations_new.append(Annotation)
-        #         # Annotations_new.append(ET.fromstring(ET.tostring(Annotation)))
-        for Annotation in cortexroot.findall("./Annotation"):
-            annotationID = Annotation.attrib['Id']
-            # print(annotationID)
-            # Annotations_new.append(Annotation)
-            for Region in Annotation.findall("./*/Region"): # iterate on all region
-                # Annotation = Annotations.find("Annotation[@Id='" + str(annotationID) + "']")
-                # Regions = Annotation.find('Regions')
-                # Annotations_new = ET.SubElement(Annotations=Annotations_new, pointList=np.array(verts), annotationID=int(annotationID))
-                verts=[]
-                for Vert in Region.findall("./Vertices/Vertex"): # iterate on all vertex in region
-                    verts.append({'X':int(float(Vert.attrib['X'])),'Y':int(float(Vert.attrib['Y']))})
-                Annotations_new = xml_add_region(Annotations=Annotations_new, pointList=np.array(verts), annotationID=int(annotationID))
 
 
-        for Annotation in baseroot.findall("./Annotation"):
-            annotationID = Annotation.attrib['Id']
-            if annotationID in ['1']:
-                continue
 
-            Annotation.attrib['Id']=str(int(Annotation.attrib['Id'])+1)
-            print(annotationID)
-            # Annotations_new.append(Annotation)
-            for regionidx,Region in enumerate(Annotation.findall("./*/Region")): # iterate on all region
-                verts=[]
-                for Vert in Region.findall("./Vertices/Vertex"): # iterate on all vertex in region
-                    verts.append({'X':int(float(Vert.attrib['X'])),'Y':int(float(Vert.attrib['Y']))})
-                Annotations_new = xml_add_region(Annotations=Annotations_new, pointList=np.array(verts), annotationID=int(annotationID)+1,regionID=regionidx+1)
-        xml_data = ET.tostring(Annotations_new, pretty_print=True)
-        #xml_data = Annotations.toprettyxml()
-        f = open(newxmlpath, 'wb')
-        f.write(xml_data)
-        f.close()
-
-        # xml_save(Annotations=Annotations_new, filename=newxmlpath)
-
-        # Convert XML to histomicsUI json
-        tree = ET.parse(newxmlpath)
-        root = tree.getroot()
-
-        # names=['Interstitium','glomerulus','sclerotic glomerulus','tubules','artery/arteriole']
-        names=['Cortex','Medulla','glomerulus','sclerotic glomerulus','tubules','artery/arteriole']
-        annotation = convert_xml_json(root, groupAnnotationsBy,names)
-
-        print('Convert to HistomicsUI json...',end='\r',flush=True)
-        with open(newxmlpath.replace('.xml','.json'), 'w') as annotation_file:
-            json.dump(annotation, annotation_file, indent=2, sort_keys=False)
-    print('\nDone.')
-
-
-def register_aperio_scn_xmls(args):
-    xml_color = [0,65280, 65535, 255, 16711680, 33023]
-    assert args.target is not None, 'You must provide the directory of XMLs and WSIs to register with --target /path/to/xmls'
-    assert args.output is not None, 'You must provide the directory for output XMLS with --output /path/to/save/location'
-
-    if args.groupBy is None:
-        groupAnnotationsBy='Annotations'
-    else:
-        groupAnnotationsBy=args.groupBy
-    if not os.path.isdir(args.output):
-        print('Creating output folder: ' + args.output)
-        os.makedirs(args.output)
-    annotatedXMLs=glob.glob(os.path.join(args.target, "*.xml"))
-    for xml in annotatedXMLs:
-        print(xml,end='\r',flush=True)
-        newxmlpath=os.path.join(args.output,xml.split('/')[-1])
-        try:
-            slide=openslide.OpenSlide(xml.replace('.xml','.scn'))
-        except Exception as e:
-            print(e)
-            exit()
-
-        dim_x=int(slide.properties['openslide.bounds-width'])## add to columns
-        dim_y=int(slide.properties['openslide.bounds-height'])## add to rows
-        offsetx=int(slide.properties['openslide.bounds-x'])##start column
-        offsety=int(slide.properties['openslide.bounds-y'])##start row
-
-        rotationoffset=dim_y-dim_x
-
-        write_minmax_to_xml(xml)
-        tree = ET.parse(xml)
-        root = tree.getroot()
-        Annotations_new = xml_create()
-        for i in range(1,3):
-            Annotations_new = xml_add_annotation(Annotations=Annotations_new,xml_color=xml_color,annotationID=i)
-        for Annotation in root.findall("./Annotation"): # for all Annotations_new
-            annotationID = Annotation.attrib['Id']
-
-            IDs=[]
-            for Region in Annotation.findall("./*/Region"): # iterate on all region
-                verts=[]
-                # cnt=[]
-                for Vert in Region.findall("./Vertices/Vertex"): # iterate on all vertex in region
-                    verts.append({'X':int(float(Vert.attrib['Y'])+offsetx),'Y':dim_x-int(float(Vert.attrib['X']))+offsety+rotationoffset})
-
-                Annotations_new = xml_add_region(Annotations=Annotations_new, pointList=np.array(verts), annotationID=int(annotationID))
-        xml_save(Annotations=Annotations_new, filename=newxmlpath)
-
-        # Convert XML to histomicsUI json
-        tree = ET.parse(newxmlpath)
-        root = tree.getroot()
-
-        names=['Cortex','Medulla','other']
-        annotation = convert_xml_json(root, groupAnnotationsBy,names)
-
-        print('Convert to HistomicsUI json...',end='\r',flush=True)
-        with open(newxmlpath.replace('.xml','.json'), 'w') as annotation_file:
-            json.dump(annotation, annotation_file, indent=2, sort_keys=False)
-    print('\nDone.')
 def xml_suey(wsiMask,xmloutname, classNum, downsample,glob_offset,xml_color):
     # make xml
     Annotations = xml_create()

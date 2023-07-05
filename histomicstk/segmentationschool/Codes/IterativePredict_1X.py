@@ -154,7 +154,7 @@ def predict(args):
         print('Building network configuration ...\n')
         #modeldir = args.project + dirs['modeldir'] + str(iteration) + '/HR'
 
-        os.environ["CUDA_VISIBLE_DEVICES"]="0,1"
+        os.environ["CUDA_VISIBLE_DEVICES"]="0"
         
         cfg = get_cfg()
         cfg.merge_from_file(model_zoo.get_config_file("COCO-PanopticSegmentation/panoptic_fpn_R_50_3x.yaml"))
@@ -172,10 +172,7 @@ def predict(args):
         else:
             cfg.INPUT.MIN_SIZE_TEST=int(region_size/2)
             cfg.INPUT.MAX_SIZE_TEST=int(region_size/2)
-
-        
         cfg.MODEL.WEIGHTS = args.modelfile
-
 
         tc=['G','SG','T','A']
         sc=['Ob','C','M','B']
@@ -280,27 +277,10 @@ def predict(args):
                         dyS=i
                         dxE=j+xLen
                         dyE=i+yLen
-                        print(xLen,yLen)
-                        print('here is the length')
                         im=np.array(slide.read_region((dxS,dyS),0,(xLen,yLen)))[:,:,:3]
-                        #print(sys.getsizeof(im), 'first')
-                        #UPSAMPLE
-                        im = zoom(im,(4,4,1),order=1)
-                        print(sys.getsizeof(im), 'second')
+
                         panoptic_seg, segments_info = predictor(im)["panoptic_seg"]
-                        del im
-                        torch.cuda.empty_cache()
-                        print(sys.getsizeof(panoptic_seg), 'third')
-                        print(sys.getsizeof(segments_info), 'forth')
                         maskpart=decode_panoptic(panoptic_seg.to("cpu").numpy(),segments_info,'kidney',args)
-                        del panoptic_seg, segments_info
-                        #outImageName=basename+'_'.join(['',str(dxS),str(dyS)])
-                        #print(sys.getsizeof(maskpart), 'fifth')
-                        #DOWNSAMPLE
-                        maskpart=zoom(maskpart,(0.25,0.25),order=0)
-                        #print(sys.getsizeof(maskpart), 'sixth')
-     
-                        # imsave(outImageName+'_p.png',maskpart)
                         if dxE != dim_x:
                             maskpart[:,-int(args.bordercrop/2):]=0
                         if dyE != dim_y:
@@ -326,8 +306,7 @@ def predict(args):
                         wsiMask[dyS:dyE,dxS:dxE]=np.maximum(maskpart,
                             wsiMask[dyS:dyE,dxS:dxE])
                         
-                        del maskpart
-                        torch.cuda.empty_cache()
+                   
                         # wsiMask[dyS:dyE,dxS:dxE]=maskpart
 
             # print('showing mask')

@@ -273,7 +273,7 @@ if __name__ == '__main__':
 
 
     ### Params for optimizing wsi mask cleanup ###
-    parser.add_argument('--min_size', dest='min_size', default=[30,30,24000,24000,10,10] ,type=int,
+    parser.add_argument('--min_size', dest='min_size', default=[30,30,30,30,30,30] ,type=int,
         help='min size region to be considered after prepass [in pixels]')
     parser.add_argument('--bordercrop', dest='bordercrop', default=300 ,type=int,
         help='min size region to be considered after prepass [in pixels]')

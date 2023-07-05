@@ -4,7 +4,7 @@ import lxml.etree as ET
 import cv2
 import matplotlib.pyplot as plt
 from skimage.morphology import binary_dilation,binary_erosion
-from skimage.morphology import disk,diamond
+from skimage.morphology import disk
 from skimage.io import imsave
 import time
 from matplotlib import path
@@ -456,21 +456,18 @@ def Regions_to_mask(Regions, bounds, IDs, downsample_factor, verbose=1):
         bounds['y_max_pad'] = max(max_size[0], bounds['y_max'])
 
         # make blank mask
-        mask = np.zeros([ int(np.round((bounds['y_max_pad'] - bounds['y_min_pad']) / downsample)), int(np.round((bounds['x_max_pad'] - bounds['x_min_pad']) / downsample)) ], dtype=np.int8)
-        mask_temp = np.zeros([ int(np.round((bounds['y_max_pad'] - bounds['y_min_pad']) / downsample)), int(np.round((bounds['x_max_pad'] - bounds['x_min_pad']) / downsample)) ], dtype=np.int8)
-
+        mask = np.zeros([ int(np.round((bounds['y_max_pad'] - bounds['y_min_pad']) / downsample)), int(np.round((bounds['x_max_pad'] - bounds['x_min_pad']) / downsample)) ], dtype=np.uint8)
+        mask_temp = np.zeros([ int(np.round((bounds['y_max_pad'] - bounds['y_min_pad']) / downsample)), int(np.round((bounds['x_max_pad'] - bounds['x_min_pad']) / downsample)) ], dtype=np.uint8)
+        
         # fill mask polygons
         index = 0
         for idx,Region in enumerate(Regions):
 
             # reformat Regions
-            Region2=np.copy(Region)
-            Region2[:,1] = np.int32(np.round((Region2[:,1] - bounds['y_min_pad']) / downsample))
-            Region2[:,0] = np.int32(np.round((Region2[:,0] - bounds['x_min_pad']) / downsample))
-            regMinX=min(Region[:,0])
-            regMinY=min(Region[:,1])
-            regMaxX=max(Region[:,0])
-            regMaxY=max(Region[:,1])
+            Region2=Region
+            Region[:,1] = np.int32(np.round((Region[:,1] - bounds['y_min_pad']) / downsample))
+            Region[:,0] = np.int32(np.round((Region[:,0] - bounds['x_min_pad']) / downsample))
+
             x_start = np.int32((np.round((bounds['x_min'] - bounds['x_min_pad'])) / downsample))
             y_start = np.int32((np.round((bounds['y_min'] - bounds['y_min_pad'])) / downsample))
             x_stop = np.int32((np.round((bounds['x_max'] - bounds['x_min_pad'])) / downsample))
@@ -478,36 +475,47 @@ def Regions_to_mask(Regions, bounds, IDs, downsample_factor, verbose=1):
 
             # get annotation ID for mask color
             ID = IDs[index]
+            '''
+            if int(ID['annotationID'])==4:
+                xl=x_stop-x_start
+                yl=y_stop-y_start
+                Region2[:,0]=Region2[:,0]-x_start
+                Region2[:,1]=Region2[:,1]-y_start
+                for vert in Region2:
+                    if vert[0]<0:
+                        vert[0]=0
+                    if vert[1]<0:
+                        vert[1]=0
+                    if vert[0]>xl:
+                        vert[0]=xl
+                    if vert[1]>yl:
+                        vert[1]=yl
+
+
+
+                mask_temp = np.zeros([int((xl) / downsample),int((yl) / downsample)], dtype=np.int8)
+
+                cv2.fillPoly(mask_temp, [Region2], int(ID['annotationID']))
+
+
+                s=disk(2)
+                e=binary_erosion(mask_temp,s).astype('uint8')
+                d=binary_dilation(mask_temp,s).astype('uint8')
+                tub_divider=np.where((d-e)==1)
+
+                mask_temp=mask_temp.astype('uint8')
+                mask_temp[tub_divider]=5
+
+                temp_pull=mask[ y_start:y_stop, x_start:x_stop ]
+                temp_pull[np.where(mask_temp==4)]=4
+                temp_pull[np.where(mask_temp==5)]=1
+                mask[ y_start:y_stop, x_start:x_stop ]=temp_pull
+            else:
+            '''
 
 
             if int(ID['annotationID'])==4:
                 #print(np.float(idx)/np.float(len(Regions)))
-                # subregMinX=min(Region2[:,0])
-                # subregMinY=min(Region2[:,1])
-                # subregMaxX=max(Region2[:,0])
-                # subregMaxY=max(Region2[:,1])
-                # reg_id=int(ID['annotationID'])
-                # submask_temp=np.zeros((regMaxY-regMinY,regMaxX-regMinX))
-                # cv2.fillPoly(submask_temp,[Region2], reg_id)
-                #
-                # tub_prev=mask[subregMinY:subregMaxY,subregMinX:subregMaxX]
-                # plt.subplot(221)
-                # plt.imshow(submask_temp)
-                # plt.subplot(222)
-                # plt.imshow(tub_prev)
-                #
-                # overlap=np.logical_and(tub_prev==reg_id,binary_dilation(submask_temp== reg_id,diamond(1)))
-                # plt.subplot(223)
-                # plt.imshow(overlap)
-                # tub_prev[submask_temp==reg_id]=reg_id
-                # plt.subplot(224)
-                # plt.imshow(tub_prev)
-                # plt.show()
-                # if np.sum(overlap)>0:
-                #     tub_prev[overlap]=1
-                #
-                #
-                # mask[subregMinY:subregMaxY,subregMinX:subregMaxX]=tub_prev
 
                 #t=time.time()
                 cv2.fillPoly(mask_temp, [Region], int(ID['annotationID']))
@@ -517,16 +525,16 @@ def Regions_to_mask(Regions, bounds, IDs, downsample_factor, verbose=1):
                 y1=np.min(Region[:,0])
                 y2=np.max(Region[:,0])
                 #t=time.time()
-                rough_submask=mask_temp[x1:x2,y1:y2]
+                rough_mask=mask_temp[x1:x2,y1:y2]
                 #print(time.time()-t)
 
 
                 #t=time.time()
-                e=binary_erosion(rough_submask,strel).astype('uint8')
+                e=binary_erosion(rough_mask,strel).astype('uint8')
                 #print(time.time()-t)
 
                 #t=time.time()
-                #d=binary_dilation(rough_submask,strel).astype('uint8')
+                #d=binary_dilation(rough_mask,strel).astype('uint8')
                 #print(time.time()-t)
 
                 #t=time.time()
@@ -534,19 +542,31 @@ def Regions_to_mask(Regions, bounds, IDs, downsample_factor, verbose=1):
                 #print(time.time()-t)
 
                 #t=time.time()
-                #rough_submask[tub_divider]=1
+                #rough_mask[tub_divider]=1
 
                 #print(time.time()-t)
 
                 #t=time.time()
                 tub_prev=mask[x1:x2,y1:y2]
+                # tub_prev[e==1]=int(ID['annotationID'])
+                #rough_mask[tub_divider]=1
+                # plt.subplot(221)
+                # plt.imshow(tub_prev)
+
+                overlap=tub_prev&rough_mask
+                # plt.subplot(222)
+                # plt.imshow(overlap)
+                # plt.subplot(223)
+                # plt.imshow(e)
+
                 tub_prev[e==1]=int(ID['annotationID'])
-                #rough_submask[tub_divider]=1
-
-                #overlap=tub_prev&rough_submask
-                #rough_submask[overlap]=1
+                #rough_mask[overlap]=1
+                tub_prev[overlap==4]=1
+                # plt.subplot(224)
+                # plt.imshow(tub_prev)
+                # plt.show()
                 mask[x1:x2,y1:y2]=tub_prev
-
+                cv2.fillPoly(mask_temp, [Region], 0)
                 #print(time.time()-t)
             else:
                 cv2.fillPoly(mask, [Region], int(ID['annotationID']))

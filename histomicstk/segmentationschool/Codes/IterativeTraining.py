@@ -2,29 +2,29 @@ import numpy as np
 import multiprocessing
 import os
 import sys
-# import cv2
-# import matplotlib.pyplot as plt
+import cv2
+import matplotlib.pyplot as plt
 import time
-# import random
+import random
 import warnings
-# import argparse
+import argparse
 
 from skimage.transform import resize
 from skimage.io import imread, imsave
-# from skimage.morphology import remove_small_objects
-# from skimage.color import rgb2lab
-# from scipy.ndimage.measurements import label
-# from scipy.ndimage.morphology import binary_fill_holes
+from skimage.morphology import remove_small_objects
+from skimage.color import rgb2lab
+from scipy.ndimage.measurements import label
+from scipy.ndimage.morphology import binary_fill_holes
 from glob import glob
-from .getWsi import getWsi
-from .xml_to_mask import xml_to_mask, get_num_classes
+from getWsi import getWsi
+from xml_to_mask import xml_to_mask,get_num_classes
 from joblib import Parallel, delayed
-from shutil import rmtree,move#,copyfile
+from shutil import rmtree,move,copyfile
 from imgaug import augmenters as iaa
-from .randomHSVshift import randomHSVshift
-from .generateTrainSet import generateDatalists
+from randomHSVshift import randomHSVshift
+from generateTrainSet import generateDatalists
 from subprocess import call
-from .get_choppable_regions import get_choppable_regions
+from get_choppable_regions import get_choppable_regions
 """
 
 Code for - cutting / augmenting / training CNN

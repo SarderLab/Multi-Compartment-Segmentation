@@ -1,39 +1,23 @@
 
 import numpy as np
-from .getWsi import getWsi
-# from skimage.filters import threshold_otsu
-# from skimage.morphology import binary_closing, disk, remove_small_objects,label
+from getWsi import getWsi
+from skimage.filters import threshold_otsu
+from skimage.morphology import binary_closing, disk, remove_small_objects,label
 from scipy.ndimage.morphology import binary_fill_holes
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 from skimage.color import rgb2hsv
 from skimage.filters import gaussian
 from skimage.morphology import binary_dilation, diamond
+def get_choppable_regions(wsi,index_x, index_y, boxSize,white_percent):
+    if wsi.split('.')[-1] != 'tif':
+        slide=getWsi(wsi)
+        slide_level = slide.level_count-1
 
-def get_choppable_regions(wsi,index_x, index_y, boxSize,white_percent,dims,glob_offset,extname):
-    if extname=='.scn':
-        choppable_regions=np.ones((len(index_y),len(index_x)))
-        return choppable_regions
-    else:
-
-        if extname=='.scn':
-            slide=getWsi(wsi)
-
-            resRatio= 16
-            ds_1=int((dims[0]+glob_offset[0])/16)
-            ds_2=int((dims[1]+glob_offset[1])/16)
-            Im=np.array(slide.read_region((int(glob_offset[0]/16),int(glob_offset[1]/16)),2,(ds_1,ds_2)))[:,:,:3]
-            # plt.imshow(Im)
-            # plt.show()
-
-        else:
-            slide=getWsi(wsi)
-            slide_level = slide.level_count-1
-
-            fullSize=slide.level_dimensions[0]
-            resRatio= 16
-            ds_1=fullSize[0]/16
-            ds_2=fullSize[1]/16
-            Im=np.array(slide.get_thumbnail((ds_1,ds_2)))
+        fullSize=slide.level_dimensions[0]
+        resRatio= 16
+        ds_1=fullSize[0]/16
+        ds_2=fullSize[1]/16
+        Im=np.array(slide.get_thumbnail((ds_1,ds_2)))
 
         ID=wsi.split('.svs')[0]
 
@@ -68,5 +52,7 @@ def get_choppable_regions(wsi,index_x, index_y, boxSize,white_percent,dims,glob_
                 if np.sum(binary2[yStart:yStop,xStart:xStop])>(white_percent*box_total):
                     choppable_regions[idxy,idxx]=1
 
+    else:
+        choppable_regions=np.ones((len(index_y),len(index_x)))
 
     return choppable_regions

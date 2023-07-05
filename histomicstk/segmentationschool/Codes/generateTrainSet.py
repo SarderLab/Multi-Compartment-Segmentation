@@ -1,7 +1,7 @@
 import glob
-# import numpy as np
+import numpy as np
 import os
-# from cv2 import imread,imwrite
+from cv2 import imread,imwrite
 
 
 def generateDatalists(images,masks,imfolder,maskfolder,imExt,maskExt,f_name1):

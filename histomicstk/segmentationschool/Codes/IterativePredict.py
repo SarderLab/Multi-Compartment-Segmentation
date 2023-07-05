@@ -2,13 +2,13 @@ import cv2
 import numpy as np
 import os
 import sys
-# import argparse
+import argparse
 import multiprocessing
 import lxml.etree as ET
 import warnings
 import time
 
-sys.path.append('..')
+sys.path.append(os.getcwd()+'/Codes')
 
 from glob import glob
 from subprocess import call
@@ -16,14 +16,14 @@ from joblib import Parallel, delayed
 from skimage.io import imread, imsave
 from skimage.transform import resize
 from scipy.ndimage.measurements import label
-# from skimage.segmentation import clear_border
+from skimage.segmentation import clear_border
 from skimage.morphology import remove_small_objects
-# from skimage import color
+from skimage import color
 from shutil import rmtree
-from .IterativeTraining import get_num_classes
-from .get_choppable_regions import get_choppable_regions
-from .get_network_performance import get_perf
-# from matplotlib import pyplot as plt
+from IterativeTraining import get_num_classes
+from get_choppable_regions import get_choppable_regions
+from get_network_performance import get_perf
+from matplotlib import pyplot as plt
 """
 Pipeline code to find gloms from WSI
 

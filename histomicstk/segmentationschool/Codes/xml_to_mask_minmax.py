@@ -1,10 +1,10 @@
 import numpy as np
-# import sys
+import sys
 import lxml.etree as ET
 import cv2
 import time
 import os
-from skimage.morphology import binary_erosion#,binary_dilation,
+from skimage.morphology import binary_dilation,binary_erosion
 from skimage.morphology import disk
 """
 location (tuple) - (x, y) tuple giving the top left pixel in the level 0 reference frame
@@ -37,49 +37,6 @@ def get_annotated_ROIs(xml_path,location,size,ROI_layer,downsample=1,tree=None):
                     verts.append([int(float(Vert.attrib['X'])),int(float(Vert.attrib['Y']))])
                 IDs.append({'regionVerts' : verts})
     return IDs
-def get_annotated_ROIs_coords_withdots(xml_path,location,size,ROI_layer,downsample=1,tree=None):
-    # parse xml and get root
-    IDs = []
-    if tree == None: tree = ET.parse(xml_path)
-    root = tree.getroot()
-
-    bounds = {'x_min' : location[0], 'y_min' : location[1], 'x_max' : location[0] + size[0]*downsample, 'y_max' : location[1] + size[1]*downsample}
-    annotationData={}
-    annotationTypes={}
-    linkIDs={}
-    for Annotation in root.findall("./Annotation"): # for all annotations
-        annotationID=Annotation.attrib['Id']
-        annotationData[annotationID]=[]
-        annotationTypes[annotationID]=Annotation.attrib['Type']
-
-        if Annotation.attrib['Type']=='9':
-            for element in Annotation.iter('InputAnnotationId'):
-                linkIDs[annotationID]=element.text
-        else:
-            linkIDs[annotationID]=annotationID
-
-        for Region in Annotation.findall("./*/Region"): # iterate on all region
-            verts=[]
-
-            for Vert in Region.findall("./Vertices/Vertex"): # iterate on all vertex in region
-                vX=int(float(Vert.attrib['X']))
-                vY=int(float(Vert.attrib['Y']))
-                verts.append([vX,vY])
-            verts=np.array(verts)
-            vXMax=np.max(verts[:,0])
-            vXMin=np.min(verts[:,0])
-            vYMax=np.max(verts[:,1])
-            vYMin=np.min(verts[:,1])
-            if Annotation.attrib['Type']=='9':
-                if bounds['x_min'] <= verts[0][0] and bounds['x_max'] >= verts[0][0] and bounds['y_min'] <= verts[0][1] and bounds['y_max'] >= verts[0][1]:
-                    annotationData[annotationID].append(verts)
-            else:
-                if bounds['x_min'] <= vXMax and bounds['x_max'] >= vXMin and bounds['y_min'] <= vYMax and bounds['y_max'] >= vYMin:
-                    annotationData[annotationID].append(verts)
-
-                # IDs.append({'regionVerts' : verts,'type': Region.attrib['Type']})
-    return annotationData,annotationTypes,linkIDs
-
 
 def xml_to_mask(xml_path, location, size,ignore_id=None, tree=None, downsample=1, verbose=0):
 
@@ -195,11 +152,17 @@ def Regions_to_mask(Regions, bounds, IDs, downsample, verbose=1):
             # reformat Regions
             Region[:,1] = np.int32(np.round((Region[:,1] - bounds['y_min_pad']) / downsample))
             Region[:,0] = np.int32(np.round((Region[:,0] - bounds['x_min_pad']) / downsample))
+            if np.min(Region[:,0])<0:
+                # print(Region[:,0])
+                Region[:,0]=np.clip(Region[:,0],a_min=0,a_max=None)
+            if np.min(Region[:,1])<0:
+                # print(Region[:,1])
+                Region[:,1]=np.clip(Region[:,1],a_min=0,a_max=None)
             # get annotation ID for mask color
 
             ID = IDs[index]
 
-            if int(ID['annotationID'])==4:
+            if int(ID['annotationID'])==[3,4,5,6]:
                 cv2.fillPoly(mask_temp, [Region], int(ID['annotationID']))
                 x1=np.min(Region[:,1])
                 x2=np.max(Region[:,1])
@@ -210,7 +173,7 @@ def Regions_to_mask(Regions, bounds, IDs, downsample, verbose=1):
                 tub_prev=mask[x1:x2,y1:y2]
                 overlap=tub_prev&rough_mask
                 tub_prev[e==1]=int(ID['annotationID'])
-                tub_prev[overlap==4]=1
+                tub_prev[overlap==int(ID['annotationID'])]=1
                 mask[x1:x2,y1:y2]=tub_prev
                 cv2.fillPoly(mask_temp, [Region], 0)
             else:

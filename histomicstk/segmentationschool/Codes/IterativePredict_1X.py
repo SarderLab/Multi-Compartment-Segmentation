@@ -1,102 +1,130 @@
 import cv2
 import numpy as np
 import os
-import json
 import sys
-import girder_client
-# import argparse
-# import multiprocessing
+import argparse
+import multiprocessing
 import lxml.etree as ET
-# import warnings
-# import time
-# import copy
-# from PIL import Image
+import warnings
+import time
+import copy
+from PIL import Image
 import glob
-from .xml_to_json import convert_xml_json
-# from subprocess import call
-# from joblib import Parallel, delayed
-# from skimage.io import imread,imsave
-# from skimage.segmentation import clear_border
+from subprocess import call
+from joblib import Parallel, delayed
+from skimage.io import imread,imsave
 from tqdm import tqdm
-# from skimage.transform import resize
+from skimage.transform import resize
 from shutil import rmtree
-# import matplotlib.pyplot as plt
-# from matplotlib import path
-# import detectron2
+import matplotlib.pyplot as plt
+
+import detectron2
 from detectron2.engine import DefaultPredictor
 from detectron2.config import get_cfg
-# from detectron2.utils.visualizer import Visualizer
-# from detectron2.data import MetadataCatalog, DatasetCatalog
+from detectron2.utils.visualizer import Visualizer
+from detectron2.data import MetadataCatalog, DatasetCatalog
 from detectron2 import model_zoo
-from .get_dataset_list import decode_panoptic
-from scipy.ndimage.morphology import binary_fill_holes
-# import tifffile as ti
-import tiffslide as openslide
-# from skimage.morphology import binary_erosion, disk
-from scipy.ndimage import zoom
-# import warnings
-import torch
+from get_dataset_list import *
 
+import warnings
+sys.path.append(os.getcwd()+'/Codes')
 
-
-from skimage.color import rgb2hsv
-from skimage.filters import gaussian
-
-# from skimage.segmentation import clear_border
-
-#os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:512"
-NAMES = ['cortical_interstitium','medullary_interstitium','non_globally_sclerotic_glomeruli','globally_sclerotic_glomeruli','tubules','arteries/arterioles']
-# from IterativeTraining import get_num_classes
-# from .get_choppable_regions import get_choppable_regions
-# from .get_network_performance import get_perf
+from IterativeTraining import get_num_classes
+from get_choppable_regions import get_choppable_regions
+from get_network_performance import get_perf
 
 """
 Pipeline code to segment regions from WSI
 
 """
-# os.environ['CUDA_VISIBLE_DEVICES']='0,1'
 
 # define xml class colormap
-xml_color = [65280, 16776960,65535, 255, 16711680, 33023]
-def decode_panoptic(image,segments_info,organType,args):
+xml_color = [65280, 65535, 255, 16711680, 33023]
+def decode_panoptic(image,segments_info,out_dir,file_name):
     # plt.imshow(image)
     # plt.show()
     detections=np.unique(image)
     detections=detections[detections>-1]
-
     out=np.zeros_like(image)
-    if organType=='liver':
-        for ids in segments_info:
-            if ids['isthing']:
-                out[image==ids['id']]=ids['category_id']+1
+    for ids in segments_info:
+        if ids['isthing']:
+            out[image==ids['id']]=ids['category_id']+1
 
-            else:
-                out[image==ids['id']]=0
+        else:
+            out[image==ids['id']]=0
+    # plt.imshow(out)
+    # plt.show()
+    # exit()
+    return out.astype('uint8')
+    # with warnings.catch_warnings():
+    #     warnings.simplefilter("ignore")
+    #     imsave(out_dir+'/'+file_name.split('/')[-1].replace('.jpeg','.png'),out.astype('uint8'))
+def validate(args):
+    # define folder structure dict
+    dirs = {'outDir': args.base_dir + '/' + args.project + args.outDir}
+    dirs['txt_save_dir'] = '/txt_files/'
+    dirs['img_save_dir'] = '/img_files/'
+    dirs['mask_dir'] = '/wsi_mask/'
+    dirs['chopped_dir'] = '/originals/'
+    dirs['save_outputs'] = args.save_outputs
+    dirs['modeldir'] = '/MODELS/'
+    dirs['training_data_dir'] = '/TRAINING_data/'
+    dirs['validation_data_dir'] = '/HOLDOUT_data/'
 
-    elif organType=='kidney':
-        for ids in segments_info:
-            if ids['isthing']:
-                out[image==ids['id']]=ids['category_id']+3
+    # find current iteration
+    if args.iteration == 'none':
+        iteration = get_iteration(args=args)
+    else:
+        iteration = int(args.iteration)
 
-            else:
-                if args.show_interstitium:
-                    if ids['category_id'] in [1,2]:
-                        out[image==ids['id']]=ids['category_id']
+    # get all WSIs
+    WSIs = []
+    for ext in [args.wsi_ext]:
+        WSIs.append(glob.glob(args.base_dir + '/' + args.project + dirs['validation_data_dir'] + '/*' + ext))
 
-
+    if iteration == 'none':
+        print('ERROR: no trained models found \n\tplease use [--option train]')
 
     else:
-        print('unsupported organType ')
-        print(organType)
-        exit()
-
-    return out.astype('uint8')
+        for iter in range(1,iteration+1):
+            dirs['xml_save_dir'] = args.base_dir + '/' + args.project + dirs['validation_data_dir'] + str(iter) + '_Predicted_XMLs/'
 
 
+            # check main directory exists
+            make_folder(dirs['outDir'])
+
+            if not os.path.exists(dirs['xml_save_dir']):
+                make_folder(dirs['xml_save_dir'])
+
+            print('working on iteration: ' + str(iter))
+
+            with open(args.base_dir + '/' + args.project + dirs['validation_data_dir'] + 'validation_stats.txt', 'a') as f:
+                f.write('\niteration: \t'+str(iter)+'\n')
+                f.write('\twsi\t\t\tsensitivity\t\t\tspecificity\t\t\tprecision\t\t\taccuracy\t\t\tprediction time\n')
+
+            for wsi in WSIs:
+                # predict xmls
+                startTime = time.time()
+
+                filename=dirs['xml_save_dir']+'/'+ (wsi.split('/')[-1]).split('.')[0] +'.xml'
+                if not os.path.isfile(filename):
+                    predict_xml(args=args, dirs=dirs, wsi=wsi, iteration=iter)
+
+                predictTime = time.time() - startTime
+                # test performance
+                gt_xml = os.path.splitext(wsi)[0] + '.xml'
+                predicted_xml = gt_xml.split('/')
+                predicted_xml = dirs['xml_save_dir'] + predicted_xml[-1]
+                sensitivity,specificity,precision,accuracy = get_perf(wsi=wsi, xml1=gt_xml, xml2 = predicted_xml, args=args)
+
+                with open(args.base_dir + '/' + args.project + dirs['validation_data_dir'] + 'validation_stats.txt', 'a') as f:
+                    f.write('\t'+wsi.split('/')[-1]+'\t\t'+str(sensitivity)+'\t\t'+str(specificity)+'\t\t'+str(precision)+'\t\t'+str(accuracy)+'\t\t'+str(predictTime)+'\n')
+
+        print('\n\n\033[92;5mDone validating: \n\t\033[0m\n')
 
 def predict(args):
     # define folder structure dict
-    dirs = {'outDir': args.base_dir}
+    dirs = {'outDir': args.base_dir + '/' + args.project + args.outDir}
     dirs['txt_save_dir'] = '/txt_files/'
     dirs['img_save_dir'] = '/img_files/'
     dirs['mask_dir'] = '/wsi_mask/'
@@ -109,262 +137,172 @@ def predict(args):
     #     iteration = get_iteration(args=args)
     # else:
     #     iteration = int(args.iteration)
-    downsample = int(args.downsampleRateHR**.5)
-    region_size = int(args.boxSize*(downsample))
-    step = int((region_size-(args.bordercrop*2))*(1-args.overlap_percentHR))
-    # gc = girder_client.GirderClient(apiUrl=args.girderApiUrl)
-    # gc.setToken(args.girderToken)
-    # project_folder = args.project
-    # project_dir_id = project_folder.split('/')[-2]
-    #model_file = args.modelfile
-    #print(model_file,'here model')
-    #model_file_id = model_file .split('/')[-2]
-    
     print('Handcoded iteration')
-
     iteration=1
     print(iteration)
-    dirs['xml_save_dir'] = args.base_dir
-    #real_path = os.path.realpath(args.project)
-    #print(real_path)
+    dirs['xml_save_dir'] = args.base_dir + '/' + args.project + dirs['training_data_dir'] + str(iteration) + '/Predicted_XMLs/'
+
     if iteration == 'none':
         print('ERROR: no trained models found \n\tplease use [--option train]')
 
     else:
         # check main directory exists
-        # make_folder(dirs['outDir'])
-        # outdir = gc.createFolder(project_directory_id,args.outDir)
-        # it = gc.createFolder(outdir['_id'],str(iteration))
+        make_folder(dirs['outDir'])
+        make_folder(dirs['xml_save_dir'])
 
         # get all WSIs
-        #WSIs = []
-        # usable_ext=args.wsi_ext.split(',')
-        # for ext in usable_ext:
-        #     WSIs.extend(glob.glob(args.project + '/*' + ext))
-        #     print('another one')
-
-        # for file in args.files:
-        #     print(file)
-        #     slidename = file['name']
-        #     _ = os.system("printf '\n---\n\nFOUND: [{}]\n'".format(slidename))
-        #     WSIs.append(slidename)
-
-        
-        # print(len(WSIs), 'number of WSI' )
-        print('Building network configuration ...\n')
-        #modeldir = args.project + dirs['modeldir'] + str(iteration) + '/HR'
-
-        os.environ["CUDA_VISIBLE_DEVICES"]="0,1"
-        
-        cfg = get_cfg()
-        cfg.merge_from_file(model_zoo.get_config_file("COCO-PanopticSegmentation/panoptic_fpn_R_50_3x.yaml"))
-        cfg.MODEL.ANCHOR_GENERATOR.SIZES = [[32],[64],[128], [256], [512], [1024]]
-        cfg.MODEL.RPN.IN_FEATURES = ['p2', 'p3', 'p4', 'p5','p6','p6']
-        # cfg.MODEL.PIXEL_MEAN=[189.409,160.487,193.422]
-        cfg.MODEL.ANCHOR_GENERATOR.ASPECT_RATIOS = [[.1,.2,0.33, 0.5, 1.0, 2.0, 3.0,5,10]]
-        cfg.MODEL.ANCHOR_GENERATOR.ANGLES=[-90,-60,-30,0,30,60,90]
-        cfg.DATALOADER.NUM_WORKERS = 10
-        cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 128   # faster, and good enough for this toy dataset (default: 512)
-        cfg.DATALOADER.FILTER_EMPTY_ANNOTATIONS=False
-        if not args.Mag20X:
-            cfg.INPUT.MIN_SIZE_TEST=region_size
-            cfg.INPUT.MAX_SIZE_TEST=region_size
-        else:
-            cfg.INPUT.MIN_SIZE_TEST=int(region_size/2)
-            cfg.INPUT.MAX_SIZE_TEST=int(region_size/2)
-
-        
-        cfg.MODEL.WEIGHTS = args.modelfile
+        WSIs = []
+        for ext in [args.wsi_ext]:
 
 
-        tc=['G','SG','T','A']
-        sc=['Ob','C','M','B']
-        classNum=len(tc)+len(sc)-1
-        cfg.MODEL.ROI_HEADS.NUM_CLASSES = len(tc)
-        cfg.MODEL.SEM_SEG_HEAD.NUM_CLASSES =len(sc)
+            WSIs.extend(glob.glob(args.base_dir + '/' + args.project + dirs['training_data_dir'] + str(iteration) + '/*' + ext))
 
-        cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = args.roi_thresh
-        # cfg.MODEL.PANOPTIC_FPN.ENABLED=False
-        # cfg.MODEL.PANOPTIC_FPN.INSTANCES_CONFIDENCE_THRESH = args.roi_thresh
-        # cfg.MODEL.PANOPTIC_FPN.OVERLAP_THRESH = 1
-
-        predictor = DefaultPredictor(cfg)
-        broken_slides=[]
-        for wsi in [args.files]:
-
+        for wsi in WSIs:
             # try:
+            predict_xml(args=args, dirs=dirs, wsi=wsi, iteration=iteration)
 
             # except Exception as e:
             #     print('!!! Prediction on ' + wsi + ' failed\n')
             #     print(e)
-            # reshape regions calc
-
-            extsplit = os.path.splitext(wsi)
-            basename = extsplit[0]
-            extname = extsplit[-1]
-            print(basename)
-            # print(extname)
-            # try:
-            slide=openslide.TiffSlide(wsi)
-            print(wsi,'here/s the silde')
-            # slide = ti.imread(wsi)
-
-            # except:
-                # broken_slides.append(wsi)
-                # continue
-            # continue
-            # get image dimensions
-            if extname=='.scn':
-                dim_y=int(slide.properties['openslide.bounds-height'])
-                dim_x=int(slide.properties['openslide.bounds-width'])
-                offsetx=int(slide.properties['openslide.bounds-x'])
-                offsety=int(slide.properties['openslide.bounds-y'])
-                # print(dim_x,dim_y,offsetx,offsety)
-            else:
-                dim_x, dim_y=slide.dimensions
-                offsetx=0
-                offsety=0
-
-            print(dim_x,dim_y)
-            fileID=basename.split('/')
-            dirs['fileID'] = fileID[-1]
-            dirs['extension'] = extname
-            dirs['file_name'] = wsi.split('/')[-1]
-
-
-            wsiMask = np.zeros([dim_y, dim_x], dtype='uint8')
-
-            index_y=np.array(range(offsety,dim_y+offsety,step))
-            index_x=np.array(range(offsetx,dim_x+offsetx,step))
-            print('Getting thumbnail mask to identify predictable tissue...')
-            fullSize=slide.level_dimensions[0]
-            resRatio= args.chop_thumbnail_resolution
-            ds_1=fullSize[0]/resRatio
-            ds_2=fullSize[1]/resRatio
-            thumbIm=np.array(slide.get_thumbnail((ds_1,ds_2)))
-            if extname =='.scn':
-                xStt=int(offsetx/resRatio)
-                xStp=int((offsetx+dim_x)/resRatio)
-                yStt=int(offsety/resRatio)
-                yStp=int((offsety+dim_y)/resRatio)
-                thumbIm=thumbIm[yStt:yStp,xStt:xStp]
-
-            hsv=rgb2hsv(thumbIm)
-            g=gaussian(hsv[:,:,1],5)
-            binary=(g>0.05).astype('bool')
-            binary=binary_fill_holes(binary)
-
-            print('Segmenting tissue ...\n')
-            totalpatches=len(index_x)*len(index_y)
-            with tqdm(total=totalpatches,unit='image',colour='green',desc='Total WSI progress') as pbar:
-                for i,j in coordinate_pairs(index_y,index_x):
-            
-                    yEnd = min(dim_y+offsety,i+region_size)
-                    xEnd = min(dim_x+offsetx,j+region_size)
-                    # yStart_small = int(np.round((i-offsety)/resRatio))
-                    # yStop_small = int(np.round(((i-offsety)+args.boxSize)/resRatio))
-                    # xStart_small = int(np.round((j-offsetx)/resRatio))
-                    # xStop_small = int(np.round(((j-offsetx)+args.boxSize)/resRatio))
-                    yStart_small = int(np.round((i-offsety)/resRatio))
-                    yStop_small = int(np.round(((yEnd-offsety))/resRatio))
-                    xStart_small = int(np.round((j-offsetx)/resRatio))
-                    xStop_small = int(np.round(((xEnd-offsetx))/resRatio))
-                    box_total=(xStop_small-xStart_small)*(yStop_small-yStart_small)
-                    pbar.update(1)
-                    if np.sum(binary[yStart_small:yStop_small,xStart_small:xStop_small])>(args.white_percent*box_total):
-
-                        xLen=xEnd-j
-                        yLen=yEnd-i
-
-                        dxS=j
-                        dyS=i
-                        dxE=j+xLen
-                        dyE=i+yLen
-                        print(xLen,yLen)
-                        print('here is the length')
-                        im=np.array(slide.read_region((dxS,dyS),0,(xLen,yLen)))[:,:,:3]
-                        #print(sys.getsizeof(im), 'first')
-                        #UPSAMPLE
-                        im = zoom(im,(4,4,1),order=1)
-                        print(sys.getsizeof(im), 'second')
-                        panoptic_seg, segments_info = predictor(im)["panoptic_seg"]
-                        del im
-                        torch.cuda.empty_cache()
-                        print(sys.getsizeof(panoptic_seg), 'third')
-                        print(sys.getsizeof(segments_info), 'forth')
-                        maskpart=decode_panoptic(panoptic_seg.to("cpu").numpy(),segments_info,'kidney',args)
-                        del panoptic_seg, segments_info
-                        #outImageName=basename+'_'.join(['',str(dxS),str(dyS)])
-                        #print(sys.getsizeof(maskpart), 'fifth')
-                        #DOWNSAMPLE
-                        maskpart=zoom(maskpart,(0.25,0.25),order=0)
-                        #print(sys.getsizeof(maskpart), 'sixth')
-     
-                        # imsave(outImageName+'_p.png',maskpart)
-                        if dxE != dim_x:
-                            maskpart[:,-int(args.bordercrop/2):]=0
-                        if dyE != dim_y:
-                            maskpart[-int(args.bordercrop/2):,:]=0
-
-                        if dxS != offsetx:
-                            maskpart[:,:int(args.bordercrop/2)]=0
-                        if dyS != offsety:
-                            maskpart[:int(args.bordercrop/2),:]=0
-
-                        # xmlbuilder.deconstruct(maskpart,dxS-offsetx,dyS-offsety,args)
-                        # plt.subplot(121)
-                        # plt.imshow(im)
-                        # plt.subplot(122)
-                        # plt.imshow(maskpart)
-                        # plt.show()
-
-                        dyE-=offsety
-                        dyS-=offsety
-                        dxS-=offsetx
-                        dxE-=offsetx
-
-                        wsiMask[dyS:dyE,dxS:dxE]=np.maximum(maskpart,
-                            wsiMask[dyS:dyE,dxS:dxE])
-                        
-                        del maskpart
-                        torch.cuda.empty_cache()
-                        # wsiMask[dyS:dyE,dxS:dxE]=maskpart
-
-            # print('showing mask')
-            # plt.imshow(wsiMask)
-            # plt.show()
-            slide.close()
-            print('\n\nStarting XML construction: ')
-
-            # wsiMask=np.swapaxes(wsiMask,0,1)
-            # print('swapped axes')
-            # xmlbuilder.sew(args)
-            # xmlbuilder.dump_to_xml(args,offsetx,offsety)
-            if extname=='.scn':
-                print('here writing 1')
-                xml_suey(wsiMask=wsiMask, dirs=dirs, args=args, classNum=classNum, downsample=downsample,glob_offset=[offsetx,offsety])
-            else:
-                print('here writing 2')
-                xml_suey(wsiMask=wsiMask, dirs=dirs, args=args, classNum=classNum, downsample=downsample,glob_offset=[0,0])
-
-
-
-
         print('\n\n\033[92;5mPlease correct the xml annotations found in: \n\t' + dirs['xml_save_dir'])
-        print('\nthen place them in: \n\t'+ dirs['training_data_dir'] + str(iteration) + '/')
+        print('\nthen place them in: \n\t'+ args.base_dir + '/' + args.project + dirs['training_data_dir'] + str(iteration) + '/')
         print('\nand run [--option train]\033[0m\n')
-        print('The following slides were not openable by openslide:')
-        print(broken_slides)
 
 
+def predict_xml(args, dirs, wsi, iteration):
+    # reshape regions calc
+    downsample = int(args.downsampleRateHR**.5)
+    region_size = int(args.boxSizeHR*(downsample))
+    step = int(region_size)-(args.bordercrop*2)
+
+    # figure out the number of classes
+    if args.classNum == 0:
+        annotatedXMLs=glob.glob(args.base_dir + '/' + args.project + dirs['training_data_dir'] + str(iteration-1) + '/*.xml')
+        classes = []
+        for xml in annotatedXMLs:
+            classes.append(get_num_classes(xml))
+        classNum = max(classes)
+    else:
+        classNum = args.classNum
+
+    if args.chop_data == 'True':
+        # chop wsi
+        fileID, test_num_steps = chop_suey(wsi, dirs, downsample, region_size, step, args)
+        dirs['fileID'] = fileID
+        print('Chop SUEY!\n')
+    else:
+        basename = os.path.splitext(wsi)[0]
+
+        if wsi.split('.')[-1] != 'tif':
+            slide=getWsi(wsi)
+            # get image dimensions
+            dim_x, dim_y=slide.dimensions
+        else:
+            im = Image.open(wsi)
+            dim_x, dim_y=im.size
+
+        fileID=basename.split('/')
+        dirs['fileID'] = fileID=fileID[len(fileID)-1]
+        # test_num_steps = file_len(dirs['outDir'] + fileID + dirs['txt_save_dir'] + fileID + '_images' + ".txt")
+
+    print('Segmenting tissue ...\n')
+    network_output_folder=dirs['outDir'] + fileID + dirs['img_save_dir'] + 'prediction'
+    make_folder(network_output_folder)
+
+    test_data_list = fileID + '_images' + '.txt'
+    modeldir = args.base_dir + '/' + args.project + dirs['modeldir'] + str(iteration) + '/HR'
+
+    os.environ["CUDA_VISIBLE_DEVICES"]=str(args.gpu)
+    t=time.time()
 
 
-def coordinate_pairs(v1,v2):
-    for i in v1:
-        for j in v2:
-            yield i,j
+    cfg = get_cfg()
+
+    cfg.merge_from_file(model_zoo.get_config_file("COCO-PanopticSegmentation/panoptic_fpn_R_50_3x.yaml"))
+    # cfg.MODEL.ANCHOR_GENERATOR.SIZES = [[4],[8],[16], [32], [64], [64], [64]]
+    # cfg.MODEL.RPN.IN_FEATURES = ['p2', 'p2', 'p2', 'p3','p4','p5','p6']
+    cfg.MODEL.ANCHOR_GENERATOR.ASPECT_RATIOS = [[0.33, 0.5, 1.0, 2.0, 3.0]]
+    cfg.MODEL.ANCHOR_GENERATOR.ANGLES=[-90,-60,-30,0,30,60,90]
+
+    cfg.DATALOADER.NUM_WORKERS = 2
+
+    cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 128   # faster, and good enough for this toy dataset (default: 512)
+    cfg.MODEL.ROI_HEADS.NUM_CLASSES = 2
+    cfg.MODEL.SEM_SEG_HEAD.NUM_CLASSES =2
+    cfg.DATALOADER.FILTER_EMPTY_ANNOTATIONS=False
+    cfg.INPUT.MIN_SIZE_TEST=0
+    # cfg.INPUT.MAX_SIZE_TEST=region_size
+    # cfg.INPUT.MIN_SIZE_TEST=64
+    # cfg.INPUT.MAX_SIZE_TEST=500
+    # cfg.INPUT.MIN_SIZE_TEST=64
+    # cfg.INPUT.MAX_SIZE_TEST=3000
+    cfg.MODEL.WEIGHTS = args.modelfile
+
+    cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = args.roi_thresh
+    if args.predict_data:
+        predictor = DefaultPredictor(cfg)
+        # make index for iters
+        wsiMask = np.zeros([dim_y, dim_x]).astype(np.uint8)
+
+        index_y=np.array(range(0,dim_y,step))
+        index_x=np.array(range(0,dim_x,step))
+        print('Getting choppable regions')
+        # get non white regions
+        choppable_regions = get_choppable_regions(wsi=wsi, index_x=index_x, index_y=index_y, boxSize=region_size,white_percent=args.white_percent)
+
+        print('Building detectron dataset')
+        DatasetCatalog.register("my_dataset", lambda:WSIGridIterator(wsi,choppable_regions,index_x,index_y,region_size,dim_x,dim_y))
+
+
+        # images_for_prediction=dirs['outDir'] + dirs['fileID'] + dirs['img_save_dir'] + dirs['chopped_dir']
+        # DatasetCatalog.register("my_dataset", lambda:HAIL2Detectron_predict(images_for_prediction,region_size))
+        MetadataCatalog.get("my_dataset").set(thing_classes=['BD','AT'])
+        MetadataCatalog.get("my_dataset").set(stuff_classes=['I','BG'])
+
+        seg_metadata=MetadataCatalog.get("my_dataset")
+        dataset_dicts=DatasetCatalog.get("my_dataset")
+        # print(len(dataset_dicts))
+        # exit()
+        for d in tqdm(dataset_dicts):
+            dxS=d["xStart"]
+            dyS=d["yStart"]
+            dxE=d["xStart"]+d["width"]
+            dyE=d["yStart"]+d["height"]
+            # print(dxS,dyS,dxE,dyE,dim_x,dim_y,np.shape(wsiMask))
+            # im = cv2.imread(d["file_name"])
+            im=np.array(slide.read_region((dxS,dyS),0,(d["width"],d["height"])))[:,:,:3][:,:,::-1]
+            panoptic_seg, segments_info = predictor(im)["panoptic_seg"]
+            wsiMask[dyS:dyE,dxS:dxE]=decode_panoptic(panoptic_seg.to("cpu").numpy(), segments_info,network_output_folder,d["file_name"])
+
+
+    # print('elapsed time '+str(time.time()-t))
+    #
+    # # un chop
+    # print('\nreconstructing wsi map ...\n')
+    # wsiMask = un_suey(dirs=dirs, args=args,wsi_a=wsi)
+
+    # save hotspots
+    #
+    # if dirs['save_outputs'] == True:
+    #     make_folder(dirs['outDir'] + fileID + dirs['mask_dir'])
+    #     print('saving to: ' + dirs['outDir'] + fileID + dirs['mask_dir'] + fileID  + '.png')
+    #     with warnings.catch_warnings():
+    #         warnings.simplefilter("ignore")
+    #         imsave(dirs['outDir'] + fileID + dirs['mask_dir'] + fileID + '.png', wsiMask)
+
+    print('\n\nStarting XML construction: ')
+
+    xml_suey(wsiMask=wsiMask, dirs=dirs, args=args, classNum=classNum, downsample=downsample)
+    DatasetCatalog.remove("my_dataset")
+
+    # # clean up
+    # if dirs['save_outputs'] == False:
+    #     print('cleaning up')
+    #     rmtree(dirs['outDir']+fileID)
+
+
 def get_iteration(args):
-    currentmodels=os.listdir(args.base_dir)
+    currentmodels=os.listdir(args.base_dir + '/' + args.project + '/MODELS/')
     if not currentmodels:
         return 'none'
     else:
@@ -389,12 +327,8 @@ def get_test_model(modeldir):
         return ''.join([modeldir,'/model_',maxmodel,'.pth'])
 
 def make_folder(directory):
-    print(directory,'predict dir')
-    #if not os.path.exists(directory):
-    try:
+    if not os.path.exists(directory):
         os.makedirs(directory) # make directory if it does not exit already # make new directory
-    except:
-        print('folder exists!')
 
 def restart_line(): # for printing chopped image labels in command line
     sys.stdout.write('\r')
@@ -402,7 +336,7 @@ def restart_line(): # for printing chopped image labels in command line
 
 def getWsi(path): #imports a WSI
     import openslide
-    slide = openslide.TiffSlide(path)
+    slide = openslide.OpenSlide(path)
     return slide
 
 def file_len(fname): # get txt file length (number of lines)
@@ -417,7 +351,187 @@ def file_len(fname): # get txt file length (number of lines)
         return 0
 
 
-def xml_suey(wsiMask, dirs, args, classNum, downsample,glob_offset):
+def chop_suey(wsi, dirs, downsample, region_size, step, args): # chop wsi
+    print('\nopening: ' + wsi)
+    basename = os.path.splitext(wsi)[0]
+
+    if wsi.split('.')[-1] != 'tif':
+        slide=getWsi(wsi)
+        # get image dimensions
+        dim_x, dim_y=slide.dimensions
+    else:
+        im = Image.open(wsi)
+        dim_x, dim_y=im.size
+
+    fileID=basename.split('/')
+    dirs['fileID'] = fileID=fileID[len(fileID)-1]
+    print('\nchopping ...\n')
+
+    # make txt file
+    make_folder(dirs['outDir'] + fileID + dirs['txt_save_dir'])
+    f_name = dirs['outDir'] + fileID + dirs['txt_save_dir'] + fileID + ".txt"
+    f2_name = dirs['outDir'] + fileID + dirs['txt_save_dir'] + fileID + '_images' + ".txt"
+    f = open(f_name, 'w')
+    f2 = open(f2_name, 'w')
+    f2.close()
+
+    make_folder(dirs['outDir'] + fileID + dirs['img_save_dir'] + dirs['chopped_dir'])
+
+    f.write('Image dimensions:\n')
+
+    # make index for iters
+    index_y=np.array(range(0,dim_y,step))
+    index_x=np.array(range(0,dim_x,step))
+
+    f.write('X dim: ' + str((index_x[-1]+region_size)/downsample) +'\n')
+    f.write('Y dim: ' + str((index_y[-1]+region_size)/downsample) +'\n\n')
+    f.write('Regions:\n')
+    f.write('image:xStart:xStop:yStart:yStop\n\n')
+    f.close()
+
+    # get non white regions
+    choppable_regions = get_choppable_regions(wsi=wsi, index_x=index_x, index_y=index_y, boxSize=region_size,white_percent=args.white_percent)
+
+    print('saving region:')
+
+    num_cores = multiprocessing.cpu_count()
+
+    Parallel(n_jobs=num_cores, backend='threading')(delayed(chop_wsi)(limits=[dim_y,dim_x],yStart=i, xStart=j, idxx=idxx, idxy=idxy,
+        f_name=f_name, f2_name=f2_name, dirs=dirs, downsample=downsample, region_size=region_size, args=args,
+        wsi=wsi, choppable_regions=choppable_regions) for idxy, i in enumerate(index_y) for idxx, j in enumerate(index_x))
+
+    test_num_steps = file_len(dirs['outDir'] + fileID + dirs['txt_save_dir'] + fileID + '_images' + ".txt")
+    print('\n\n' + str(test_num_steps) +' image regions chopped')
+
+    return fileID, test_num_steps
+
+def chop_wsi(limits,yStart, xStart, idxx, idxy, f_name, f2_name, dirs, downsample, region_size, args, wsi, choppable_regions): # perform cutting in parallel
+    if choppable_regions[idxy, idxx] != 0:
+        yEnd = yStart+region_size
+        #print(yEnd)
+        xEnd = xStart+region_size
+        #print(xEnd)
+        xLen=xEnd-xStart
+        yLen=yEnd-yStart
+
+        if wsi.split('.') != 'tif':
+            slide = getWsi(wsi)
+            subsect= np.array(slide.read_region((xStart,yStart),0,(xLen,yLen)))
+            subsect=subsect[:,:,:3]
+
+        else:
+            subsect_ = imread(wsi)[yStart:yEnd, xStart:xEnd, :3]
+            subsect = np.zeros([region_size,region_size,3])
+            subsect[0:subsect_.shape[0], 0:subsect_.shape[1], :] = subsect_
+
+		#print(whiteRatio)
+        imageIter = str(xStart)+str(yStart)
+
+        f = open(f_name, 'a+')
+        f2 = open(f2_name, 'a+')
+
+        # append txt file
+        f.write(imageIter + ':' + str(xStart/downsample) + ':' + str(xEnd/downsample)
+            + ':' + str(yStart/downsample) + ':' + str(yEnd/downsample) + '\n')
+
+		# resize image
+        if downsample > 1:
+            c=(subsect.shape)
+            s1=int(c[0]/downsample)
+            s2=int(c[1]/downsample)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                subsect=resize(subsect,(s1,s2), mode='constant')
+
+        # save image
+        directory = dirs['outDir'] + dirs['fileID'] + dirs['img_save_dir'] + dirs['chopped_dir']
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            imsave(directory + dirs['fileID'] + str(imageIter) + args.imBoxExt,subsect)
+
+        f2.write(dirs['chopped_dir'] + dirs['fileID'] + str(imageIter) + args.imBoxExt + '\n')
+        f.close()
+        f2.close()
+
+        sys.stdout.write('   <'+str(xStart)+':'+str(xEnd)+' '+str(yStart)+':'+str(yEnd)+'>   ')
+        sys.stdout.flush()
+        restart_line()
+
+def un_suey(dirs,wsi_a, args): # reconstruct wsi from predicted masks
+    txtFile = dirs['fileID'] + '.txt'
+
+    # read txt file
+    f = open(dirs['outDir'] + dirs['fileID'] + dirs['txt_save_dir'] + txtFile, 'r')
+    lines = f.readlines()
+    f.close()
+    lines = np.array(lines)
+
+    # get wsi size
+    xDim = np.uint32(float((lines[1].split(': ')[1]).split('\n')[0]))
+    yDim = np.uint32(float((lines[2].split(': ')[1]).split('\n')[0]))
+    #print('xDim: ' + str(xDim))
+    #print('yDim: ' + str(yDim))
+
+    # make wsi mask
+    wsiMask = np.zeros([yDim, xDim]).astype(np.uint8)
+
+    # read image regions
+    for regionNum in range(7, np.size(lines)):
+        # print regionNum
+        sys.stdout.write('   <'+str(regionNum-7)+ ' of ' + str(np.size(lines)-8) +'>   ')
+        sys.stdout.flush()
+        restart_line()
+
+        # get region
+        region = lines[regionNum].split(':')
+        region[4] = region[4].split('\n')[0]
+
+        # read mask
+        mask = imread(dirs['outDir'] + dirs['fileID'] + dirs['img_save_dir'] + 'prediction/' + dirs['fileID'] + region[0] + '.png')
+
+        # get region bounds
+        xStart = np.uint32(float(region[1]))
+        #print('xStart: ' + str(xStart))
+        xStop = np.uint32(float(region[2]))
+        #print('xStop: ' + str(xStop))
+        yStart = np.uint32(float(region[3]))
+        #print('yStart: ' + str(yStart))
+        yStop = np.uint32(float(region[4]))
+        #print('yStop: ' + str(yStop))
+
+        if yStop > yDim:
+            yStop=yDim
+        if xStop > xDim:
+            xStop=xDim
+
+
+
+        mask_part = wsiMask[yStart:yStop, xStart:xStop]
+
+
+
+
+        ylen, xlen = np.shape(mask_part)
+        mask = mask[:ylen, :xlen]
+
+        if yStart>0:
+            mask[-args.bordercrop:,:]=0
+        if xStart>0:
+            mask[:,-args.bordercrop:]=0
+        if yStop<yDim:
+            mask[0:args.bordercrop,:]=0
+        if xStop<xDim:
+            mask[:,0:args.bordercrop]=0
+        wsiMask[yStart:yStop, xStart:xStop] = np.maximum(mask_part, mask).astype(np.uint8)
+        #wsiMask[yStart:yStop, xStart:xStop] = mask.astype(np.uint8)
+
+        #plt.imshow(wsiMask)
+        #plt.show()
+        #wsiMask[yStart:yStop, xStart:xStop] = np.ones([yStop-yStart, xStop-xStart])
+
+    return wsiMask
+
+def xml_suey(wsiMask, dirs, args, classNum, downsample):
     # make xml
     Annotations = xml_create()
     # add annotation
@@ -429,38 +543,18 @@ def xml_suey(wsiMask, dirs, args, classNum, downsample,glob_offset):
         # print output
         print('\t working on: annotationID ' + str(value))
         # get only 1 class binary mask
-        binary_mask = np.zeros(np.shape(wsiMask),dtype='uint8')
+        binary_mask = np.zeros(np.shape(wsiMask)).astype('uint8')
         binary_mask[wsiMask == value] = 1
 
         # add mask to xml
-        pointsList = get_contour_points(binary_mask, args=args, downsample=downsample,value=value,offset={'X':glob_offset[0],'Y':glob_offset[1]})
-        for i in range(len(pointsList)):
+        pointsList = get_contour_points(binary_mask, args=args, downsample=downsample,value=value)
+        for i in range(np.shape(pointsList)[0]):
             pointList = pointsList[i]
             Annotations = xml_add_region(Annotations=Annotations, pointList=pointList, annotationID=value)
 
     # save xml
-    folder = args.base_dir
-    girder_folder_id = folder.split('/')[-2]
-    _ = os.system("printf 'Using data from girder_client Folder: {}\n'".format(folder))
-    file_name = dirs['file_name']
-    print(file_name)
-    gc = girder_client.GirderClient(apiUrl=args.girderApiUrl)
-    gc.setToken(args.girderToken)
-    files = list(gc.listItem(girder_folder_id))
-    # dict to link filename to gc id
-    item_dict = dict()
-    for file in files:
-        d = {file['name']:file['_id']}
-        item_dict.update(d)
-    print(item_dict)
-    print(item_dict[file_name])
-    annots = convert_xml_json(Annotations, NAMES)
-    for annot in annots:
-        _ = gc.post(path='annotation',parameters={'itemId':item_dict[file_name]}, data = json.dumps(annot))
-        print('uploating layers')
-    print('annotation uploaded...\n')
-
-
+    print(dirs['xml_save_dir']+'/'+dirs['fileID']+'.xml')
+    xml_save(Annotations=Annotations, filename=dirs['xml_save_dir']+'/'+dirs['fileID']+'.xml')
 
 def get_contour_points(mask, args, downsample,value, offset={'X': 0,'Y': 0}):
     # returns a dict pointList with point 'X' and 'Y' values
@@ -469,7 +563,7 @@ def get_contour_points(mask, args, downsample,value, offset={'X': 0,'Y': 0}):
     pointsList = []
     #maskPoints2=copy.deepcopy(maskPoints)
 
-    for j in np.array(range(len(maskPoints))):
+    for j in range(np.shape(maskPoints)[0]):
         if len(maskPoints[j])>2:
             #m=np.squeeze(np.asarray(maskPoints2[j]))
             #xMax=np.max(m[:,1])
@@ -486,7 +580,7 @@ def get_contour_points(mask, args, downsample,value, offset={'X': 0,'Y': 0}):
 
             if cv2.contourArea(maskPoints[j]) > args.min_size[value-1]:
                 pointList = []
-                for i in np.array(range(0,len(maskPoints[j]),4)):
+                for i in range(0,np.shape(maskPoints[j])[0],4):
                     point = {'X': (maskPoints[j][i][0][0] * downsample) + offset['X'], 'Y': (maskPoints[j][i][0][1] * downsample) + offset['Y']}
                     pointList.append(point)
                 pointsList.append(pointList)
@@ -503,10 +597,7 @@ def xml_add_annotation(Annotations, annotationID=None): # add new annotation
     # defualts to new annotationID
     if annotationID == None: # not specified
         annotationID = len(Annotations.findall('Annotation')) + 1
-    if annotationID in [1,2]:
-        Annotation = ET.SubElement(Annotations, 'Annotation', attrib={'Type': '4', 'Visible': '0', 'ReadOnly': '0', 'Incremental': '0', 'LineColorReadOnly': '0', 'LineColor': str(xml_color[annotationID-1]), 'Id': str(annotationID), 'NameReadOnly': '0'})
-    else:
-        Annotation = ET.SubElement(Annotations, 'Annotation', attrib={'Type': '4', 'Visible': '1', 'ReadOnly': '0', 'Incremental': '0', 'LineColorReadOnly': '0', 'LineColor': str(xml_color[annotationID-1]), 'Id': str(annotationID), 'NameReadOnly': '0'})
+    Annotation = ET.SubElement(Annotations, 'Annotation', attrib={'Type': '4', 'Visible': '1', 'ReadOnly': '0', 'Incremental': '0', 'LineColorReadOnly': '0', 'LineColor': str(xml_color[annotationID-1]), 'Id': str(annotationID), 'NameReadOnly': '0'})
     Regions = ET.SubElement(Annotation, 'Regions')
     return Annotations
 
@@ -525,14 +616,14 @@ def xml_add_region(Annotations, pointList, annotationID=-1, regionID=None): # ad
     ET.SubElement(Vertices, 'Vertex', attrib={'X': str(pointList[0]['X']), 'Y': str(pointList[0]['Y']), 'Z': '0'})
     return Annotations
 
-# def xml_save(Annotations, filename):
-#     xml_data = ET.tostring(Annotations, pretty_print=True)
-#     #xml_data = Annotations.toprettyxml()
-#     f = open(filename, 'w')
-#     f.write(xml_data.decode())
-#     f.close()
+def xml_save(Annotations, filename):
+    xml_data = ET.tostring(Annotations, pretty_print=True)
+    #xml_data = Annotations.toprettyxml()
+    f = open(filename, 'wb')
+    f.write(xml_data)
+    f.close()
 
-# def read_xml(filename):
-#     # import xml file
-#     tree = ET.parse(filename)
-#     root = tree.getroot()
+def read_xml(filename):
+    # import xml file
+    tree = ET.parse(filename)
+    root = tree.getroot()

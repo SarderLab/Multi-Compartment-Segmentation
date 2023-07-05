@@ -2,10 +2,10 @@ import numpy as np
 import sys
 import lxml.etree as ET
 import cv2
-# import matplotlib.pyplot as plt
-from skimage.morphology import binary_erosion#,binary_dilation,
+import matplotlib.pyplot as plt
+from skimage.morphology import binary_dilation,binary_erosion
 from skimage.morphology import disk
-# import time
+import time
 
 def get_num_classes(xml_path):
     # parse xml and get root

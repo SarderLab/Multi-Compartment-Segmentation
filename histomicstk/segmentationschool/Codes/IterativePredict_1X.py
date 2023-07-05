@@ -33,9 +33,9 @@ from scipy.ndimage.morphology import binary_fill_holes
 # import tifffile as ti
 import tiffslide as openslide
 # from skimage.morphology import binary_erosion, disk
-from scipy.ndimage import zoom
+
 # import warnings
-import torch
+
 
 
 
@@ -202,8 +202,11 @@ def predict(args):
             print(basename)
             # print(extname)
             # try:
-            slide=openslide.TiffSlide(wsi)
-            print(wsi,'here/s the silde')
+            try:
+                slide=openslide.TiffSlide(wsi)
+            except:
+                broken_slides.append(wsi)
+                continue
             # slide = ti.imread(wsi)
 
             # except:

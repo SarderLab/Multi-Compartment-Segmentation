@@ -4,63 +4,32 @@ import os
 import json
 import sys
 import girder_client
-# import argparse
-# import multiprocessing
 import lxml.etree as ET
-# import warnings
-# import time
-# import copy
-# from PIL import Image
 import glob
 from .xml_to_json import convert_xml_json
-# from subprocess import call
-# from joblib import Parallel, delayed
-# from skimage.io import imread,imsave
-# from skimage.segmentation import clear_border
 from tqdm import tqdm
-# from skimage.transform import resize
 from shutil import rmtree
-# import matplotlib.pyplot as plt
-# from matplotlib import path
-# import detectron2
 from detectron2.engine import DefaultPredictor
 from detectron2.config import get_cfg
-# from detectron2.utils.visualizer import Visualizer
-# from detectron2.data import MetadataCatalog, DatasetCatalog
 from detectron2 import model_zoo
 from .get_dataset_list import decode_panoptic
 from scipy.ndimage.morphology import binary_fill_holes
-# import tifffile as ti
 import tiffslide as openslide
-# from skimage.morphology import binary_erosion, disk
-
-# import warnings
-
-
-
-
 from skimage.color import rgb2hsv
 from skimage.filters import gaussian
 
-# from skimage.segmentation import clear_border
 
-#os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:512"
 NAMES = ['cortical_interstitium','medullary_interstitium','non_globally_sclerotic_glomeruli','globally_sclerotic_glomeruli','tubules','arteries/arterioles']
-# from IterativeTraining import get_num_classes
-# from .get_choppable_regions import get_choppable_regions
-# from .get_network_performance import get_perf
+XML_COLOR = [65280, 16776960,65535, 255, 16711680, 33023]
 
 """
 Pipeline code to segment regions from WSI
 
 """
-# os.environ['CUDA_VISIBLE_DEVICES']='0,1'
 
-# define xml class colormap
-xml_color = [65280, 16776960,65535, 255, 16711680, 33023]
+
 def decode_panoptic(image,segments_info,organType,args):
-    # plt.imshow(image)
-    # plt.show()
+
     detections=np.unique(image)
     detections=detections[detections>-1]
 
@@ -95,64 +64,20 @@ def decode_panoptic(image,segments_info,organType,args):
 
 
 def predict(args):
-    # define folder structure dict
     dirs = {'outDir': args.base_dir}
-    dirs['txt_save_dir'] = '/txt_files/'
-    dirs['img_save_dir'] = '/img_files/'
-    dirs['mask_dir'] = '/wsi_mask/'
-    dirs['chopped_dir'] = '/originals/'
-    dirs['save_outputs'] = args.save_outputs
-    dirs['modeldir'] = '/MODELS/'
-    dirs['training_data_dir'] = '/TRAINING_data/'
-    # find current iteration
-    # if args.iteration == 'none':
-    #     iteration = get_iteration(args=args)
-    # else:
-    #     iteration = int(args.iteration)
     downsample = int(args.downsampleRateHR**.5)
     region_size = int(args.boxSize*(downsample))
     step = int((region_size-(args.bordercrop*2))*(1-args.overlap_percentHR))
-    # gc = girder_client.GirderClient(apiUrl=args.girderApiUrl)
-    # gc.setToken(args.girderToken)
-    # project_folder = args.project
-    # project_dir_id = project_folder.split('/')[-2]
-    #model_file = args.modelfile
-    #print(model_file,'here model')
-    #model_file_id = model_file .split('/')[-2]
-    
     print('Handcoded iteration')
-
     iteration=1
     print(iteration)
     dirs['xml_save_dir'] = args.base_dir
-    #real_path = os.path.realpath(args.project)
-    #print(real_path)
     if iteration == 'none':
         print('ERROR: no trained models found \n\tplease use [--option train]')
 
     else:
-        # check main directory exists
-        # make_folder(dirs['outDir'])
-        # outdir = gc.createFolder(project_directory_id,args.outDir)
-        # it = gc.createFolder(outdir['_id'],str(iteration))
 
-        # get all WSIs
-        #WSIs = []
-        # usable_ext=args.wsi_ext.split(',')
-        # for ext in usable_ext:
-        #     WSIs.extend(glob.glob(args.project + '/*' + ext))
-        #     print('another one')
-
-        # for file in args.files:
-        #     print(file)
-        #     slidename = file['name']
-        #     _ = os.system("printf '\n---\n\nFOUND: [{}]\n'".format(slidename))
-        #     WSIs.append(slidename)
-
-        
-        # print(len(WSIs), 'number of WSI' )
         print('Building network configuration ...\n')
-        #modeldir = args.project + dirs['modeldir'] + str(iteration) + '/HR'
 
         os.environ["CUDA_VISIBLE_DEVICES"]="0"
         
@@ -181,45 +106,25 @@ def predict(args):
         cfg.MODEL.SEM_SEG_HEAD.NUM_CLASSES =len(sc)
 
         cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = args.roi_thresh
-        # cfg.MODEL.PANOPTIC_FPN.ENABLED=False
-        # cfg.MODEL.PANOPTIC_FPN.INSTANCES_CONFIDENCE_THRESH = args.roi_thresh
-        # cfg.MODEL.PANOPTIC_FPN.OVERLAP_THRESH = 1
-
         predictor = DefaultPredictor(cfg)
         broken_slides=[]
         for wsi in [args.files]:
-
-            # try:
-
-            # except Exception as e:
-            #     print('!!! Prediction on ' + wsi + ' failed\n')
-            #     print(e)
-            # reshape regions calc
-
             extsplit = os.path.splitext(wsi)
             basename = extsplit[0]
             extname = extsplit[-1]
             print(basename)
-            # print(extname)
-            # try:
+
             try:
-                slide=openslide.TiffSlide(wsi)
+                slide=openslide.Openslide(wsi)
             except:
                 broken_slides.append(wsi)
                 continue
-            # slide = ti.imread(wsi)
 
-            # except:
-                # broken_slides.append(wsi)
-                # continue
-            # continue
-            # get image dimensions
             if extname=='.scn':
                 dim_y=int(slide.properties['openslide.bounds-height'])
                 dim_x=int(slide.properties['openslide.bounds-width'])
                 offsetx=int(slide.properties['openslide.bounds-x'])
                 offsety=int(slide.properties['openslide.bounds-y'])
-                # print(dim_x,dim_y,offsetx,offsety)
             else:
                 dim_x, dim_y=slide.dimensions
                 offsetx=0
@@ -261,10 +166,6 @@ def predict(args):
             
                     yEnd = min(dim_y+offsety,i+region_size)
                     xEnd = min(dim_x+offsetx,j+region_size)
-                    # yStart_small = int(np.round((i-offsety)/resRatio))
-                    # yStop_small = int(np.round(((i-offsety)+args.boxSize)/resRatio))
-                    # xStart_small = int(np.round((j-offsetx)/resRatio))
-                    # xStop_small = int(np.round(((j-offsetx)+args.boxSize)/resRatio))
                     yStart_small = int(np.round((i-offsety)/resRatio))
                     yStop_small = int(np.round(((yEnd-offsety))/resRatio))
                     xStart_small = int(np.round((j-offsetx)/resRatio))
@@ -293,14 +194,6 @@ def predict(args):
                             maskpart[:,:int(args.bordercrop/2)]=0
                         if dyS != offsety:
                             maskpart[:int(args.bordercrop/2),:]=0
-
-                        # xmlbuilder.deconstruct(maskpart,dxS-offsetx,dyS-offsety,args)
-                        # plt.subplot(121)
-                        # plt.imshow(im)
-                        # plt.subplot(122)
-                        # plt.imshow(maskpart)
-                        # plt.show()
-
                         dyE-=offsety
                         dyS-=offsety
                         dxS-=offsetx
@@ -310,18 +203,10 @@ def predict(args):
                             wsiMask[dyS:dyE,dxS:dxE])
                         
                    
-                        # wsiMask[dyS:dyE,dxS:dxE]=maskpart
 
-            # print('showing mask')
-            # plt.imshow(wsiMask)
-            # plt.show()
             slide.close()
             print('\n\nStarting XML construction: ')
 
-            # wsiMask=np.swapaxes(wsiMask,0,1)
-            # print('swapped axes')
-            # xmlbuilder.sew(args)
-            # xmlbuilder.dump_to_xml(args,offsetx,offsety)
             if extname=='.scn':
                 print('here writing 1')
                 xml_suey(wsiMask=wsiMask, dirs=dirs, args=args, classNum=classNum, downsample=downsample,glob_offset=[offsetx,offsety])
@@ -449,23 +334,9 @@ def get_contour_points(mask, args, downsample,value, offset={'X': 0,'Y': 0}):
     # input greyscale binary image
     maskPoints, contours = cv2.findContours(np.array(mask), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_TC89_KCOS)
     pointsList = []
-    #maskPoints2=copy.deepcopy(maskPoints)
 
     for j in np.array(range(len(maskPoints))):
         if len(maskPoints[j])>2:
-            #m=np.squeeze(np.asarray(maskPoints2[j]))
-            #xMax=np.max(m[:,1])
-            #xMin=np.min(m[:,1])
-            #yMax=np.max(m[:,0])
-            #yMin=np.min(m[:,0])
-            #for point in maskPoints2[j]:
-            #    point[0][0]-=yMin
-            #    point[0][1]-=xMin
-
-            #mask=np.zeros((xMax-xMin,yMax-yMin))
-
-            #mask=cv2.fillConvexPoly(img=mask,points=maskPoints2[j],color=1)
-
             if cv2.contourArea(maskPoints[j]) > args.min_size[value-1]:
                 pointList = []
                 for i in np.array(range(0,len(maskPoints[j]),4)):
@@ -486,9 +357,9 @@ def xml_add_annotation(Annotations, annotationID=None): # add new annotation
     if annotationID == None: # not specified
         annotationID = len(Annotations.findall('Annotation')) + 1
     if annotationID in [1,2]:
-        Annotation = ET.SubElement(Annotations, 'Annotation', attrib={'Type': '4', 'Visible': '0', 'ReadOnly': '0', 'Incremental': '0', 'LineColorReadOnly': '0', 'LineColor': str(xml_color[annotationID-1]), 'Id': str(annotationID), 'NameReadOnly': '0'})
+        Annotation = ET.SubElement(Annotations, 'Annotation', attrib={'Type': '4', 'Visible': '0', 'ReadOnly': '0', 'Incremental': '0', 'LineColorReadOnly': '0', 'LineColor': str(XML_COLOR[annotationID-1]), 'Id': str(annotationID), 'NameReadOnly': '0'})
     else:
-        Annotation = ET.SubElement(Annotations, 'Annotation', attrib={'Type': '4', 'Visible': '1', 'ReadOnly': '0', 'Incremental': '0', 'LineColorReadOnly': '0', 'LineColor': str(xml_color[annotationID-1]), 'Id': str(annotationID), 'NameReadOnly': '0'})
+        Annotation = ET.SubElement(Annotations, 'Annotation', attrib={'Type': '4', 'Visible': '1', 'ReadOnly': '0', 'Incremental': '0', 'LineColorReadOnly': '0', 'LineColor': str(XML_COLOR[annotationID-1]), 'Id': str(annotationID), 'NameReadOnly': '0'})
     Regions = ET.SubElement(Annotation, 'Regions')
     return Annotations
 
@@ -506,15 +377,3 @@ def xml_add_region(Annotations, pointList, annotationID=-1, regionID=None): # ad
     # add connecting point
     ET.SubElement(Vertices, 'Vertex', attrib={'X': str(pointList[0]['X']), 'Y': str(pointList[0]['Y']), 'Z': '0'})
     return Annotations
-
-# def xml_save(Annotations, filename):
-#     xml_data = ET.tostring(Annotations, pretty_print=True)
-#     #xml_data = Annotations.toprettyxml()
-#     f = open(filename, 'w')
-#     f.write(xml_data.decode())
-#     f.close()
-
-# def read_xml(filename):
-#     # import xml file
-#     tree = ET.parse(filename)
-#     root = tree.getroot()

@@ -41,6 +41,28 @@
       <index>1</index>
     </file>
   </parameters>
+    <parameters advanced="true">
+    <label>Deconvolution Thresholds</label>
+    <description>A Girder API URL and token for Girder client</description>
+    <integer>
+      <name>h_threshold</name>
+      <label>h-threhsold</label>
+      <description>h-threhshold for glomeruli and sclerotic glomeruli</description>
+      <default>160</default>
+    </integer>
+    <double>
+      <name>satruation_threshold</name>
+      <label>Satruation Threshold</label>
+      <description>Satruation Threshold for glomeruli and sclerotic glomeruli</description>
+      <default>0.3</default>
+    </double>
+    <double>
+      <name>whitespace_threshold</name>
+      <label>Whitespace Threshold</label>
+      <description>Whitespace Threshold for tubules</description>
+      <default>0.88</default>
+    </double>
+  </parameters>
   <parameters advanced="true">
     <label>Girder API URL and Key</label>
     <description>A Girder API URL and token for Girder client</description>

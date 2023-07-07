@@ -1,8 +1,4 @@
 import numpy as np
-from tqdm import tqdm
-from skimage import measure
-from skimage.color import rgb2hsv
-
 
 GLOM_DICT = {3:'Glomeruli',4:'Sclerotic Glomeruli'}
 
@@ -96,59 +92,3 @@ def deconvolution(img,MOD):
     img_stain2=np.reshape(img_stain2,(dims[0],dims[1]))
     img_stain3=np.reshape(img_stain3,(dims[0],dims[1]))
     return img_stain1,img_stain2,img_stain3
-
-def process_glom_features(mask_xml, glom_value, MOD, slide, mpp):
-
-    glomeruli = mask_xml == glom_value
-    glomeruli = glomeruli.astype(np.uint8)
-    glomeruli = measure.label(glomeruli)
-    glomeruli_unique_max = np.max(glomeruli)
-    gloms = np.zeros((glomeruli_unique_max,7))
-    props = measure.regionprops(glomeruli)
-
-    for i in tqdm(range(glomeruli_unique_max),desc=GLOM_DICT[glom_value]):
-        #Area, Cellularity, Mesangial Area to Cellularity Ratio
-        area = (props[i].area)*(mpp**2)
-        x1,y1,x2,y2 = props[i].bbox
-
-        crop = slide.read_region((y1,x1),0,(y2-y1,x2-x1))
-        crop = np.array(crop)
-        crop = crop[:,:,:3]
-
-        mask = (glomeruli[x1:x2,y1:y2] == i+1).astype(np.uint8)
-
-        hsv = rgb2hsv(crop)
-        hsv = hsv[:,:,1]
-        pas_seg = hsv > 0.3
-        pas_seg = pas_seg.astype(np.uint8)
-        pas_seg = np.multiply(pas_seg,mask)
-        pas_seg = pas_seg.astype(np.uint8)
-
-        h,_,_ = deconvolution(crop,MOD)
-
-        h = 255-h
-        # h = (h>threshold_otsu(h))
-        h = h>160
-        h = h.astype(np.uint8)
-
-
-        pas_seg = ((pas_seg - h) >0).astype(np.uint8)
-
-        mask_pixels = np.sum(mask)
-        pas_pixels = np.sum(pas_seg)
-
-        mes_fraction = (pas_pixels*(mpp**2)) / area
-
-        mes_fraction = pas_pixels/mask_pixels
-
-        gloms[i,0] = x1
-        gloms[i,1] = x2
-        gloms[i,2] = y1
-        gloms[i,3] = y2
-        gloms[i,4] = area*(mpp**2)
-        gloms[i,5] = pas_pixels*(mpp**2)
-        gloms[i,6] = mes_fraction
-    
-    del glomeruli
-
-    return gloms

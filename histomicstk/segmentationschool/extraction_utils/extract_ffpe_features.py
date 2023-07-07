@@ -1,36 +1,8 @@
 import sys, cv2
 import numpy as np
-
-# import lxml.etree as ET
-# from matplotlib import path
-# import matplotlib.patches as patches
-# import glob
-# import tifffile as ti
-# import xlsxwriter
-# import multiprocessing
-# from scipy.ndimage.morphology import distance_transform_edt
-# from scipy.ndimage import binary_fill_holes
-# from skimage.transform import resize
-# from skimage.util import img_as_ubyte
-
-
-
 from skimage.morphology import binary_erosion,disk
-
 from skimage.filters import *
-
-
-# from vitessce.data_utils import optimize_arr
-# from anndata import AnnData
-
-#NOTES:
-# - combine all features into single csv with 0s for features in other compartments
-# - Add a column for slide name
-# - Make sure feature names are distinguished from other compartments
-NAMES_DICT = {'non_globally_sclerotic_glomeruli':3,
-              'globally_sclerotic_glomeruli':4,
-              'tubules':5,
-              'arteries/arterioles':6}
+from .layer_dict import NAMES_DICT
 
 def imreconstruct(marker: np.ndarray, mask: np.ndarray, radius: int = 1):
     """Iteratively expand the markers white keeping them limited by the mask during each iteration.

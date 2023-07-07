@@ -1,6 +1,6 @@
 import numpy as np
-import matplotlib.pyplot as plt
 
+GLOM_DICT = {3:'Glomeruli',4:'Sclerotic Glomeruli'}
 
 def deconvolution(img,MOD):
     MODx=MOD[0]

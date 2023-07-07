@@ -291,8 +291,11 @@ def xml_suey(wsiMask, dirs, args, classNum, downsample,glob_offset):
     for i in range(classNum)[1:]: # exclude background class
         Annotations = xml_add_annotation(Annotations=Annotations, annotationID=i)
 
+    unique_mask = []
+    for i in range(0, len(wsiMask), 7000):
+        unique_mask.extend(np.unique(wsiMask[i:i + 7000]))
 
-    for value in np.unique(wsiMask)[1:]:
+    for value in np.unique(unique_mask)[1:]:
         # print output
         print('\t working on: annotationID ' + str(value))
         # get only 1 class binary mask

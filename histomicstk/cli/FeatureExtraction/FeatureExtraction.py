@@ -10,7 +10,7 @@ sys.path.append("..")
 
 from segmentationschool.extraction_utils.extract_ffpe_features import xml_to_mask
 from segmentationschool.extraction_utils.layer_dict import NAMES_DICT
-from segmentationschool.extraction_utils.process_mc_features import process_glom_features, process_tubules_features
+from segmentationschool.extraction_utils.process_mc_features import process_glom_features, process_tubules_features, process_arteriol_features
 
 
 MODx=np.zeros((3,))

@@ -1,7 +1,6 @@
 import os
 import argparse
 import sys
-import numpy as np
 import time
 
 sys.path.append('..')

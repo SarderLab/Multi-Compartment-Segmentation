@@ -87,4 +87,15 @@ def main(args):
             df.to_excel(writer, index=False, sheet_name=compart_names[idx])
 
 if __name__ == "__main__":
-    main(argparse.ArgumentParser().parse_args())
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--base_dir')
+    parser.add_argument('--input_file')
+    parser.add_argument('--downsample_factor')
+    parser.add_argument('--output_filename')
+    parser.add_argument('--h_threshold')
+    parser.add_argument('--satruation_threshold')
+    parser.add_argument('--whitespace_threshold')
+    parser.add_argument('--girderApiUrl')
+    parser.add_argument('--girderToken')
+
+    main(parser.parse_args())

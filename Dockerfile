@@ -44,7 +44,7 @@ RUN apt-get update && \
     unzip \
     libhdf5-dev \
     libpython-dev \
-    libpython3.8-dev \
+    libpython3-dev \
     python2.7-dev \
     python-tk \
     # We can't go higher than 3.7 and use tensorflow 1.x \
@@ -108,15 +108,15 @@ ENV build_path=$PWD/build
 # HistomicsTK sepcific
 
 # copy HistomicsTK files
-ENV htk_path=$PWD/HistomicsTK
+ENV mc_path=$PWD/MultiC
 RUN mkdir -p $htk_path
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends memcached && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-COPY . $htk_path/
-WORKDIR $htk_path
+COPY . $mc_path/
+WORKDIR $mc_path
 
 RUN pip install --no-cache-dir --upgrade --ignore-installed pip setuptools && \
     pip install --no-cache-dir .  && \
@@ -127,7 +127,7 @@ RUN pip install --no-cache-dir --upgrade --ignore-installed pip setuptools && \
 
 RUN python --version && pip --version && pip freeze
 
-WORKDIR $htk_path/histomicstk/cli
+WORKDIR $mc_path/multic/cli
 
 # Test our entrypoint.  If we have incompatible versions of numpy and
 # openslide, one of these will fail

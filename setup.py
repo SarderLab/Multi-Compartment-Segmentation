@@ -2,19 +2,9 @@
 # -*- coding: utf-8 -*-
 
 import os
-import sys
 
 from setuptools import find_packages
-
-try:
-    from skbuild import setup
-except ImportError:
-    sys.stderr.write("""scikit-build is required to build from source or run tox.
-Please run:
-  python -m pip install scikit-build
-""")
-    # from setuptools import setup
-    sys.exit(1)
+from setuptools import setup
 
 
 with open('README.rst', 'rt') as readme_file:
@@ -39,17 +29,17 @@ def prerelease_local_scheme(version):
 
 
 setup(
-    name='histomicstk',
+    name='multic',
     use_scm_version={'local_scheme': prerelease_local_scheme},
-    description='A Python toolkit for Histopathology Image Analysis',
+    description='multi comprtment segmentation, feature extraction',
     long_description=readme,
     long_description_content_type='text/x-rst',
-    author='Kitware, Inc.',
-    author_email='developers@digitalslidearchive.net',
-    url='https://github.com/DigitalSlideArchive/HistomicsTK',
+    author='Sayat Mimar',
+    author_email='sayat.mimar@ufl.edu',
+    url='https://github.com/SarderLab/Multi-Compartment-Segmentation',
     packages=find_packages(exclude=['tests', '*_test']),
     package_dir={
-        'histomicstk': 'histomicstk',
+        'multic': 'multic',
     },
     include_package_data=True,
     install_requires=[
@@ -90,7 +80,7 @@ setup(
         # 'ctk-cli',
     ],
     license='Apache Software License 2.0',
-    keywords='histomicstk',
+    keywords='multic',
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'License :: OSI Approved :: Apache Software License',

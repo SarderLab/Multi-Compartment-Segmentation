@@ -20,4 +20,10 @@ def main(args):
     os.system(cmd)
 
 if __name__ == "__main__":
-    main(argparse.ArgumentParser().parse_args())
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--base_dir')
+    parser.add_argument('--input_file')
+    parser.add_argument('--modelfile')
+    parser.add_argument('--girderApiUrl')
+    parser.add_argument('--girderToken')
+    main(parser.parse_args())

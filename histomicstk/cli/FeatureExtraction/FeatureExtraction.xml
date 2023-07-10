@@ -41,7 +41,7 @@
       <index>1</index>
     </file>
   </parameters>
-    <parameters advanced="true">
+  <parameters advanced="true">
     <label>Deconvolution Thresholds</label>
     <description>A Girder API URL and token for Girder client</description>
     <integer>

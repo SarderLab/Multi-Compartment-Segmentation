@@ -1,17 +1,15 @@
+import argparse
+import sys
 import os, girder_client
 import numpy as np
-import tiffslide as openslide
-from skimage.filters import *
 import pandas as pd
-from histomicstk.cli.utils import CLIArgumentParser
-import sys
+import tiffslide as openslide
 
 sys.path.append("..")
 
 from segmentationschool.extraction_utils.extract_ffpe_features import xml_to_mask
 from segmentationschool.extraction_utils.layer_dict import NAMES_DICT
 from segmentationschool.extraction_utils.process_mc_features import process_glom_features, process_tubules_features, process_arteriol_features
-
 
 MODx=np.zeros((3,))
 MODy=np.zeros((3,))
@@ -89,4 +87,4 @@ def main(args):
             df.to_excel(writer, index=False, sheet_name=compart_names[idx])
 
 if __name__ == "__main__":
-    main(CLIArgumentParser().parse_args())
+    main(argparse.ArgumentParser().parse_args())

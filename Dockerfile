@@ -119,7 +119,6 @@ COPY . $htk_path/
 WORKDIR $htk_path
 
 RUN pip install --no-cache-dir --upgrade --ignore-installed pip setuptools && \
-    pip install -r "$htk_path/requirements-dev.txt" && \
     pip install --no-cache-dir .  && \
     pip install --no-cache-dir tensorboard cmake onnx && \
     pip install --no-cache-dir torch==1.10  torchaudio==0.10 torchvision==0.11.1 -f https://download.pytorch.org/whl/cu111/torch_stable.html && \

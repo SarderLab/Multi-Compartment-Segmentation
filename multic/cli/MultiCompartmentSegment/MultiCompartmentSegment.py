@@ -1,6 +1,6 @@
 import os
 import sys
-import argparse
+from ctk_cli import CLIArgumentParser
 
 def main(args):
 
@@ -20,10 +20,4 @@ def main(args):
     os.system(cmd)
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--base_dir')
-    parser.add_argument('--input_file')
-    parser.add_argument('--modelfile')
-    parser.add_argument('--girderApiUrl')
-    parser.add_argument('--girderToken')
-    main(parser.parse_args())
+    main(CLIArgumentParser().parse_args())

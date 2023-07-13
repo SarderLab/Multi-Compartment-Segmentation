@@ -1,15 +1,16 @@
-import argparse
 import sys
 import os, girder_client
 import numpy as np
 import pandas as pd
 import tiffslide as openslide
+from ctk_cli import CLIArgumentParser
 
 sys.path.append("..")
 
 from segmentationschool.extraction_utils.extract_ffpe_features import xml_to_mask
 from segmentationschool.extraction_utils.layer_dict import NAMES_DICT
 from segmentationschool.extraction_utils.process_mc_features import process_glom_features, process_tubules_features, process_arteriol_features
+
 
 MODx=np.zeros((3,))
 MODy=np.zeros((3,))
@@ -67,8 +68,8 @@ def main(args):
     mpp = slide.properties['tiffslide.mpp-x']
     mask_xml = xml_to_mask(annotations_filtered,(0,0),(x,y),downsample_factor=args.downsample_factor)
 
-    gloms = process_glom_features(mask_xml, NAMES_DICT['non_globally_sclerotic_glomeruli'], MOD, slide,mpp, h_threshold=args.h_threshold, satruation_threshold=args.satruation_threshold)
-    s_gloms = process_glom_features(mask_xml, NAMES_DICT['globally_sclerotic_glomeruli'], MOD, slide,mpp, h_threshold=args.h_threshold, satruation_threshold=args.satruation_threshold)
+    gloms = process_glom_features(mask_xml, NAMES_DICT['non_globally_sclerotic_glomeruli'], MOD, slide,mpp, h_threshold=args.h_threshold, saturation_threshold=args.saturation_threshold)
+    s_gloms = process_glom_features(mask_xml, NAMES_DICT['globally_sclerotic_glomeruli'], MOD, slide,mpp, h_threshold=args.h_threshold, saturation_threshold=args.saturation_threshold)
     tubs = process_tubules_features(mask_xml, NAMES_DICT['tubules'], MOD, slide,mpp,whitespace_threshold=args.whitespace_threshold)
     arts = process_arteriol_features(mask_xml, NAMES_DICT['arteries/arterioles'], mpp)
 
@@ -87,15 +88,4 @@ def main(args):
             df.to_excel(writer, index=False, sheet_name=compart_names[idx])
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--base_dir')
-    parser.add_argument('--input_file')
-    parser.add_argument('--downsample_factor')
-    parser.add_argument('--output_filename')
-    parser.add_argument('--h_threshold')
-    parser.add_argument('--satruation_threshold')
-    parser.add_argument('--whitespace_threshold')
-    parser.add_argument('--girderApiUrl')
-    parser.add_argument('--girderToken')
-
-    main(parser.parse_args())
+    main(CLIArgumentParser().parse_args())

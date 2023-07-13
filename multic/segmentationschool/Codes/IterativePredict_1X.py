@@ -214,11 +214,6 @@ def predict(args):
                 print('here writing 2')
                 xml_suey(wsiMask=wsiMask, dirs=dirs, args=args, classNum=classNum, downsample=downsample,glob_offset=[0,0])
 
-
-
-
-        print('\n\n\033[92;5mPlease correct the xml annotations found in: \n\t' + dirs['xml_save_dir'])
-        print('\nthen place them in: \n\t'+ dirs['training_data_dir'] + str(iteration) + '/')
         print('\nand run [--option train]\033[0m\n')
         print('The following slides were not openable by openslide:')
         print(broken_slides)

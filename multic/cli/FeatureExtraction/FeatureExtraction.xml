@@ -38,29 +38,32 @@
       <label>Output Excel Filename</label>
       <description>Select the name and location of the Excel file produced. By default this will be saved in your Private folder.</description>
       <channel>output</channel>
-      <index>1</index>
+      <index>3</index>
     </file>
   </parameters>
   <parameters advanced="true">
     <label>Deconvolution Thresholds</label>
-    <description>A Girder API URL and token for Girder client</description>
+    <description>Deconvolution Thresholds</description>
     <integer>
       <name>h_threshold</name>
       <label>h-threhsold</label>
       <description>h-threhshold for glomeruli and sclerotic glomeruli</description>
       <default>160</default>
+      <index>0</index>
     </integer>
     <double>
-      <name>satruation_threshold</name>
-      <label>Satruation Threshold</label>
+      <name>saturation_threshold</name>
+      <label>Saturation Threshold</label>
       <description>Satruation Threshold for glomeruli and sclerotic glomeruli</description>
       <default>0.3</default>
+      <index>1</index>
     </double>
     <double>
       <name>whitespace_threshold</name>
       <label>Whitespace Threshold</label>
       <description>Whitespace Threshold for tubules</description>
       <default>0.88</default>
+      <index>2</index>
     </double>
   </parameters>
   <parameters advanced="true">

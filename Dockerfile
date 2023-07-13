@@ -109,7 +109,7 @@ ENV build_path=$PWD/build
 
 # copy HistomicsTK files
 ENV mc_path=$PWD/MultiC
-RUN mkdir -p $htk_path
+RUN mkdir -p $mc_path
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends memcached && \

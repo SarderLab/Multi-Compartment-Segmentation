@@ -53,13 +53,11 @@ def process_glom_features(mask_xml, glom_value, MOD, slide, mpp, h_threshold, sa
 
         mes_fraction = (pas_pixels*(mpp**2)) / area
 
-        mes_fraction = pas_pixels/mask_pixels
-
         gloms[i,0] = x1
         gloms[i,1] = x2
         gloms[i,2] = y1
         gloms[i,3] = y2
-        gloms[i,4] = area*(mpp**2)
+        gloms[i,4] = area
         gloms[i,5] = pas_pixels*(mpp**2)
         gloms[i,6] = mes_fraction
     

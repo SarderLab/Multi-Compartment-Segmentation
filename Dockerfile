@@ -7,7 +7,7 @@
 
 # start from nvidia/cuda 10.0
 # FROM nvidia/cuda:10.0-cudnn7-devel-ubuntu18.04
-FROM nvidia/cuda:10.2-base-ubuntu18.04
+FROM nvidia/cuda:11.1.1-base-ubuntu18.04
 LABEL com.nvidia.volumes.needed="nvidia_driver"
 
 LABEL maintainer="Sayat Mimar - Sarder Lab. <sayat.mimar@ufl.edu>"
@@ -108,73 +108,26 @@ ENV build_path=$PWD/build
 # HistomicsTK sepcific
 
 # copy HistomicsTK files
-ENV htk_path=$PWD/HistomicsTK
-RUN mkdir -p $htk_path
+ENV mc_path=$PWD/MultiC
+RUN mkdir -p $mc_path
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends memcached && \
-    #apt-get autoremove && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-# RUN pip install torch
-# RUN python -c 'import torch,sys;print(torch.cuda.is_available());sys.exit(not torch.cuda.is_available())'
-COPY . $htk_path/
-WORKDIR $htk_path
 
-# Install HistomicsTK and its dependencies
-#   Upgrade setuptools, as the version in Conda won't upgrade cleanly unless it
-# is ignored.
-
+COPY . $mc_path/
+WORKDIR $mc_path
 
 RUN pip install --no-cache-dir --upgrade --ignore-installed pip setuptools && \
-    # pip install --no-cache-dir 'tensorflow<2' && \
-    # Install large_image memcached extras \
-    pip install --no-cache-dir 'large-image[memcached]' && \
-    # Install HistomicsTK \
-    pip install --no-cache-dir . --find-links https://girder.github.io/large_image_wheels && \
-    # Install tf-slim \
-    pip install --no-cache-dir 'tf-slim>=1.1.0' && \
-    # Install pillow_lut \
-    pip install --no-cache-dir 'pillow-lut' && \
-
+    pip install --no-cache-dir .  && \
     pip install --no-cache-dir tensorboard cmake onnx && \
-
     pip install --no-cache-dir torch==1.10  torchaudio==0.10 torchvision==0.11.1 -f https://download.pytorch.org/whl/cu111/torch_stable.html && \
-
-    #pip install --no-cache-dir 'git+https://github.com/facebookresearch/fvcore' && \
-
-    #git clone https://github.com/facebookresearch/detectron2 detectron2_repo && \
-    #git clone https://github.com/facebookresearch/detectron2.git && \
     python -m pip install detectron2 -f https://dl.fbaipublicfiles.com/detectron2/wheels/cu111/torch1.10/index.html && \
-    #python -m pip install -e detectron2 && \
-    # clean up \
     rm -rf /root/.cache/pip/*
 
-# ENV FORCE_CUDA="1"
-# ARG TORCH_CUDA_ARCH_LIST="Kepler;Kepler+Tesla;Maxwell;Maxwell+Tegra;Pascal;Volta;Turing"
-# ENV TORCH_CUDA_ARCH_LIST="${TORCH_CUDA_ARCH_LIST}"
-# RUN pip install --no-cache-dir -e detectron2_repo
-# Show what was installed
 RUN python --version && pip --version && pip freeze
 
-#RUN pip install --user torch==1.10 torchvision==0.11.1 -f https://download.pytorch.org/whl/cu111/torch_stable.html
-
-#RUN pip install --user 'git+https://github.com/facebookresearch/fvcore'
-# install detectron2
-#RUN git clone https://github.com/facebookresearch/detectron2 detectron2_repo
-# set FORCE_CUDA because during `docker build` cuda is not accessible
-#ENV FORCE_CUDA="1"
-# remove cuda compat
-# RUN apt remove --purge cuda-compat-10-0 --yes
-
-# pregenerate font cache
-RUN python -c "from matplotlib import pylab"
-
-# Suppress warnings
-# RUN sed -i 's/^_PRINT_DEPRECATION_WARNINGS = True/_PRINT_DEPRECATION_WARNINGS = False/g' /usr/local/lib/python3.8/dist-packages/tensorflow_core/python/util/deprecation.py && \
-#     sed -i 's/rename = get_rename_v2(full_name)/rename = False/g' /usr/local/lib/python3.8/dist-packages/tensorflow_core/python/util/module_wrapper.py
-
-# define entrypoint through which all CLIs can be run
-WORKDIR $htk_path/histomicstk/cli
+WORKDIR $mc_path/multic/cli
 
 # Test our entrypoint.  If we have incompatible versions of numpy and
 # openslide, one of these will fail

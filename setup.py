@@ -2,19 +2,9 @@
 # -*- coding: utf-8 -*-
 
 import os
-import sys
 
 from setuptools import find_packages
-
-try:
-    from skbuild import setup
-except ImportError:
-    sys.stderr.write("""scikit-build is required to build from source or run tox.
-Please run:
-  python -m pip install scikit-build
-""")
-    # from setuptools import setup
-    sys.exit(1)
+from setuptools import setup
 
 
 with open('README.rst', 'rt') as readme_file:
@@ -39,17 +29,17 @@ def prerelease_local_scheme(version):
 
 
 setup(
-    name='histomicstk',
+    name='multic',
     use_scm_version={'local_scheme': prerelease_local_scheme},
-    description='A Python toolkit for Histopathology Image Analysis',
+    description='multi comprtment segmentation, feature extraction',
     long_description=readme,
     long_description_content_type='text/x-rst',
-    author='Kitware, Inc.',
-    author_email='developers@digitalslidearchive.net',
-    url='https://github.com/DigitalSlideArchive/HistomicsTK',
+    author='Sayat Mimar',
+    author_email='sayat.mimar@ufl.edu',
+    url='https://github.com/SarderLab/Multi-Compartment-Segmentation',
     packages=find_packages(exclude=['tests', '*_test']),
     package_dir={
-        'histomicstk': 'histomicstk',
+        'multic': 'multic',
     },
     include_package_data=True,
     install_requires=[
@@ -57,13 +47,13 @@ setup(
         'nimfa>=1.3.2',
         'numpy>=1.21.1',
         'scipy>=0.19.0',
-        'Pillow>=3.2.0',
+        'Pillow==9.5.0',
         'pandas>=0.19.2',
         'imageio>=2.3.0',
-        'shapely[vectorized]',
+        # 'shapely[vectorized]',
         #'opencv-python-headless<4.7',
         #'sqlalchemy',
-        'matplotlib',
+        # 'matplotlib',
         'pyvips',
         'termcolor',
         'seaborn',
@@ -74,23 +64,23 @@ setup(
         'lxml==4.8.0',
         'joblib==1.1.0',
         'tifffile==2023.4.12',
-        'tiffslide==1.5.0',
+        'tiffslide',
         'tqdm==4.64.0',
-        'umap-learn==0.5.3',
+        # 'umap-learn==0.5.3',
         'openpyxl',
         'xlrd<2',
         # dask packages
         'dask[dataframe]>=1.1.0',
         'distributed>=1.21.6',
         # large image sources
-        'large-image[sources]',
+        # 'large-image[sources]',
         'girder-slicer-cli-web',
         'girder-client',
         # cli
         'ctk-cli',
     ],
     license='Apache Software License 2.0',
-    keywords='histomicstk',
+    keywords='multic',
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'License :: OSI Approved :: Apache Software License',

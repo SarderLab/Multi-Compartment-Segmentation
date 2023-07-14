@@ -64,7 +64,7 @@ setup(
         'lxml==4.8.0',
         'joblib==1.1.0',
         'tifffile==2023.4.12',
-        'tiffslide==1.5.0',
+        'tiffslide',
         'tqdm==4.64.0',
         # 'umap-learn==0.5.3',
         'openpyxl',

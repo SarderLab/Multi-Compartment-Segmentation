@@ -1,6 +1,6 @@
 import numpy as np
 from tqdm import tqdm
-from skimage.color import rgb2lab
+from skimage.color import rgb2lab, rgb2hsv
 from skimage import exposure
 from skimage.morphology import remove_small_objects,binary_erosion,binary_dilation,disk,binary_opening,binary_closing
 from skimage.filters import threshold_otsu
@@ -11,7 +11,7 @@ from .PAS_deconvolution import deconvolution
 
 GLOM_DICT = {3:'Glomeruli',4:'Sclerotic Glomeruli'}
 
-def process_glom_features(mask_xml, glom_value, MOD, slide, mpp, h_threshold, satruation_threshold):
+def process_glom_features(mask_xml, glom_value, MOD, slide, mpp, h_threshold, saturation_threshold):
 
     glomeruli = mask_xml == glom_value
     glomeruli = glomeruli.astype(np.uint8)
@@ -33,7 +33,7 @@ def process_glom_features(mask_xml, glom_value, MOD, slide, mpp, h_threshold, sa
 
         hsv = rgb2hsv(crop)
         hsv = hsv[:,:,1]
-        pas_seg = hsv > satruation_threshold
+        pas_seg = hsv > saturation_threshold
         pas_seg = pas_seg.astype(np.uint8)
         pas_seg = np.multiply(pas_seg,mask)
         pas_seg = pas_seg.astype(np.uint8)
@@ -46,7 +46,7 @@ def process_glom_features(mask_xml, glom_value, MOD, slide, mpp, h_threshold, sa
         h = h.astype(np.uint8)
 
 
-        pas_seg = ((pas_seg - h) >0).astype(np.uint8)
+        pas_seg = ((pas_seg - h) > 0).astype(np.uint8)
 
         mask_pixels = np.sum(mask)
         pas_pixels = np.sum(pas_seg)

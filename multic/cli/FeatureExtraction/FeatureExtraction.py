@@ -2,7 +2,7 @@ import sys
 import os, girder_client
 import numpy as np
 import pandas as pd
-import tiffslide as openslide
+from tiffslide import TiffSlide
 from ctk_cli import CLIArgumentParser
 
 sys.path.append("..")
@@ -62,7 +62,7 @@ def main(args):
     cwd = os.getcwd()
     print(cwd)
 
-    slide = openslide.OpenSlide(args.input_file)
+    slide = TiffSlide(args.input_file)
     x,y = slide.dimensions
 
     mpp = slide.properties['tiffslide.mpp-x']

@@ -1,7 +1,6 @@
 import sys, cv2
 import numpy as np
 from skimage.morphology import binary_erosion,disk
-from skimage.filters import *
 from .layer_dict import NAMES_DICT
 
 def imreconstruct(marker: np.ndarray, mask: np.ndarray, radius: int = 1):

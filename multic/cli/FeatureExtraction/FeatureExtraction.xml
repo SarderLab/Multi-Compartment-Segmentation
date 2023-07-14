@@ -48,22 +48,22 @@
       <name>h_threshold</name>
       <label>h-threhsold</label>
       <description>h-threhshold for glomeruli and sclerotic glomeruli</description>
+      <longflag>h_threshold</longflag>
       <default>160</default>
-      <index>0</index>
     </integer>
     <double>
       <name>saturation_threshold</name>
       <label>Saturation Threshold</label>
       <description>Satruation Threshold for glomeruli and sclerotic glomeruli</description>
+      <longflag>saturation_threshold</longflag>
       <default>0.3</default>
-      <index>1</index>
     </double>
     <double>
       <name>whitespace_threshold</name>
       <label>Whitespace Threshold</label>
       <description>Whitespace Threshold for tubules</description>
+      <longflag>whitespace_threshold</longflag>
       <default>0.88</default>
-      <index>2</index>
     </double>
   </parameters>
   <parameters advanced="true">

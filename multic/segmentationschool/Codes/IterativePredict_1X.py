@@ -14,7 +14,7 @@ from detectron2.config import get_cfg
 from detectron2 import model_zoo
 from .get_dataset_list import decode_panoptic
 from scipy.ndimage.morphology import binary_fill_holes
-import tiffslide as openslide
+from tiffslide import TiffSlide
 from skimage.color import rgb2hsv
 from skimage.filters import gaussian
 
@@ -115,7 +115,7 @@ def predict(args):
             print(basename)
 
             try:
-                slide=openslide.Openslide(wsi)
+                slide=TiffSlide(wsi)
             except:
                 broken_slides.append(wsi)
                 continue

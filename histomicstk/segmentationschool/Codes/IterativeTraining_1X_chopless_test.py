@@ -1,7 +1,5 @@
 import os, sys, cv2, time, random, warnings, argparse, csv, multiprocessing,json,copy
 from skimage.color import rgb2hsv,hsv2rgb,rgb2lab,lab2rgb
-import detectron2_custom2.detectron2
-from utils import IdGenerator, id2rgb
 import numpy as np
 import matplotlib.pyplot as plt
 import lxml.etree as ET
@@ -25,7 +23,6 @@ setup_logger()
 from detectron2 import model_zoo
 from detectron2.engine import DefaultPredictor,DefaultTrainer
 from detectron2.config import get_cfg
-from detectron2_custom2.detectron2.utils.visualizer import Visualizer,ColorMode
 # from detectron2.data import MetadataCatalog, DatasetCatalog
 from detectron2.data import detection_utils as utils
 import detectron2.data.transforms as T
@@ -38,6 +35,12 @@ from detectron2.data import (DatasetCatalog,
 from detectron2.config import configurable
 from typing import List, Optional, Union
 import torch
+
+from utils import IdGenerator, id2rgb
+
+# sys.append("..")
+import detectron2_custom2.detectron2
+from detectron2_custom2.detectron2.utils.visualizer import Visualizer,ColorMode
 
 from wsi_loader_utils import *
 from imgaug import augmenters as iaa
@@ -75,25 +78,25 @@ def IterateTraining(args):
     dirs['pretraindir'] = '/Deeplab_network/'
     dirs['training_data_dir'] = '/TRAINING_data/'
     dirs['model_init'] = 'deeplab_resnet.ckpt'
-    dirs['project']= '/' + args.project
-    dirs['data_dir_HR'] = args.base_dir +'/' + args.project + '/Permanent/HR/'
-    dirs['data_dir_LR'] = args.base_dir +'/' +args.project + '/Permanent/LR/'
+    dirs['project']= '/' + args.base_dir
+    dirs['data_dir_HR'] = args.base_dir +'/Permanent/HR/'
+    dirs['data_dir_LR'] = args.base_dir   + '/Permanent/LR/'
 
-    currentmodels=os.listdir(dirs['basedir'] + dirs['project'] + dirs['modeldir'])
+    currentmodels=os.listdir(dirs['basedir'] +  dirs['modeldir'])
     print('Handcoded iteration')
     # currentAnnotationIteration=check_model_generation(dirs)
     currentAnnotationIteration=0
     print('Current training session is: ' + str(currentAnnotationIteration))
-    dirs['xml_dir']=dirs['basedir'] + dirs['project'] + dirs['training_data_dir'] + str(currentAnnotationIteration) + '/'
+    dirs['xml_dir']=dirs['basedir'] + dirs['training_data_dir'] + str(currentAnnotationIteration) + '/'
     ##Create objects for storing class distributions
     # annotatedXMLs=glob.glob(dirs['basedir'] + dirs['project'] + dirs['training_data_dir'] + str(currentAnnotationIteration) + '/*.xml')
 
 
     # train_dset = WSITrainingLoader(args,dirs['basedir'] + dirs['project'] + dirs['training_data_dir'] + str(currentAnnotationIteration))
 
-    modeldir_HR = dirs['basedir']+dirs['project'] + dirs['modeldir'] + str(currentAnnotationIteration+1) + '/HR/'
+    modeldir_HR = dirs['basedir']+ dirs['modeldir'] + str(currentAnnotationIteration+1) + '/HR/'
 
-    os.environ["CUDA_VISIBLE_DEVICES"]=str(args.gpu)
+    os.environ["CUDA_VISIBLE_DEVICES"]="0,1"
 
     organType='kidney'
     print('Organ meta being set to... '+ organType)
@@ -113,7 +116,7 @@ def IterateTraining(args):
     else:
         print('Provided organType not in supported types: kidney, liver')
     rand_sample=True
-    json_dir=dirs['basedir']+'/'+dirs['project'] + '/Permanent/HR/'
+    json_dir=dirs['basedir']+'/'+ '/Permanent/HR/'
     json_file=json_dir+'detectron_train'
     classNum=len(tc)+len(sc)-1
     print('Number classes: '+ str(classNum))
@@ -125,10 +128,11 @@ def IterateTraining(args):
 
     num_images=args.batch_size*args.train_steps
     # slide_idxs=train_dset.get_random_slide_idx(num_images)
-    usable_slides=get_slide_data(args, wsi_directory=dirs['basedir'] + dirs['project'] + dirs['training_data_dir'] + str(currentAnnotationIteration))
+    usable_slides=get_slide_data(args, wsi_directory=dirs['basedir'] + dirs['training_data_dir'] + str(currentAnnotationIteration))
     usable_idx=range(0,len(usable_slides))
     slide_idxs=random.choices(usable_idx,k=num_images)
     image_coordinates=get_random_chops(slide_idxs,usable_slides,region_size)
+    print(len(image_coordinates))
     # usable_slides=[]
     # num_cores=multiprocessing.cpu_count()
     # print('Generating detectron2 dictionary format...')
@@ -203,9 +207,9 @@ def IterateTraining(args):
     num_cores = multiprocessing.cpu_count()
     cfg.DATALOADER.NUM_WORKERS = 10
 
-    # cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-PanopticSegmentation/panoptic_fpn_R_50_3x.yaml")  # Let training initialize from model zoo
+    cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-PanopticSegmentation/panoptic_fpn_R_50_3x.yaml")  # Let training initialize from model zoo
 
-    cfg.MODEL.WEIGHTS = os.path.join('/hdd/bg/Detectron2/HAIL_Detectron2/output_medulla_long1', "model_0214999.pth")
+    #cfg.MODEL.WEIGHTS = os.path.join('/hdd/bg/Detectron2/HAIL_Detectron2/output_medulla_long1', "model_0214999.pth")
     # cfg.MODEL.WEIGHTS = os.path.join('/hdd/bg/Detectron2/HAIL_Detectron2/outputAugRCC', "model_final.pth")
     # if args.custom_image_means:
     #     x=np.array(train_dset.get_image_means())
@@ -272,7 +276,7 @@ def IterateTraining(args):
 
     finish_model_generation(dirs,currentAnnotationIteration)
 
-    print('\n\n\033[92;5mPlease place new wsi file(s) in: \n\t' + dirs['basedir'] + dirs['project']+ dirs['training_data_dir'] + str(currentAnnotationIteration+1))
+    print('\n\n\033[92;5mPlease place new wsi file(s) in: \n\t' + dirs['basedir'] +dirs['training_data_dir'] + str(currentAnnotationIteration+1))
     print('\nthen run [--option predict]\033[0m\n')
 
 
@@ -280,13 +284,13 @@ def IterateTraining(args):
 
 
 def check_model_generation(dirs):
-    modelsCurrent=os.listdir(dirs['basedir'] + dirs['project'] + dirs['modeldir'])
+    modelsCurrent=os.listdir(dirs['basedir'] + dirs['modeldir'])
     gens=map(int,modelsCurrent)
     modelOrder=np.sort(gens)[::-1]
 
     for idx in modelOrder:
         #modelsChkptsLR=glob.glob(dirs['basedir'] + dirs['project'] + dirs['modeldir']+str(modelsCurrent[idx]) + '/LR/*.ckpt*')
-        modelsChkptsHR=glob.glob(dirs['basedir'] + dirs['project'] + dirs['modeldir']+ str(idx) +'/HR/*.ckpt*')
+        modelsChkptsHR=glob.glob(dirs['basedir']  + dirs['modeldir']+ str(idx) +'/HR/*.ckpt*')
         if modelsChkptsHR == []:
             continue
         else:
@@ -294,22 +298,22 @@ def check_model_generation(dirs):
             break
 
 def finish_model_generation(dirs,currentAnnotationIteration):
-    make_folder(dirs['basedir'] + dirs['project'] + dirs['training_data_dir'] + str(currentAnnotationIteration + 1))
+    make_folder(dirs['basedir'] +  dirs['training_data_dir'] + str(currentAnnotationIteration + 1))
 
 def get_pretrain(currentAnnotationIteration,res,dirs):
 
     if currentAnnotationIteration==0:
-        pretrain_file = glob.glob(dirs['basedir']+dirs['project'] + dirs['modeldir'] + str(currentAnnotationIteration) + res + '*')
+        pretrain_file = glob.glob(dirs['basedir']+ dirs['modeldir'] + str(currentAnnotationIteration) + res + '*')
         pretrain_file=pretrain_file[0].split('.')[0] + '.' + pretrain_file[0].split('.')[1]
 
     else:
-        pretrains=glob.glob(dirs['basedir']+dirs['project'] + dirs['modeldir'] + str(currentAnnotationIteration) + res + 'model*')
+        pretrains=glob.glob(dirs['basedir']+ dirs['modeldir'] + str(currentAnnotationIteration) + res + 'model*')
         maxmodel=0
         for modelfiles in pretrains:
             modelID=modelfiles.split('.')[-2].split('-')[1]
             if int(modelID)>maxmodel:
                 maxmodel=int(modelID)
-        pretrain_file=dirs['basedir']+dirs['project'] + dirs['modeldir'] + str(currentAnnotationIteration) + res + 'model.ckpt-' + str(maxmodel)
+        pretrain_file=dirs['basedir']+ dirs['modeldir'] + str(currentAnnotationIteration) + res + 'model.ckpt-' + str(maxmodel)
     return pretrain_file
 
 def restart_line(): # for printing chopped image labels in command line
@@ -397,7 +401,7 @@ def return_region(args, wsi_mask, wsiID, fileID, yStart, xStart, idxy, idxx, dow
             s1=int(c[0]/(downsampleRate**.5))
             s2=int(c[1]/(downsampleRate**.5))
             Im=resize(Im,(s1,s2),mode='reflect')
-        mask_out_name=dirs['basedir']+dirs['project'] + '/Permanent/HR/masks/'+uniqID+dirs['maskExt']
+        mask_out_name=dirs['basedir'] + '/Permanent/HR/masks/'+uniqID+dirs['maskExt']
         image_out_name=mask_out_name.replace('/masks/','/regions/').replace(dirs['maskExt'],dirs['imExt'])
 
         with warnings.catch_warnings():

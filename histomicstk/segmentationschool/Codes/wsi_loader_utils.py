@@ -27,6 +27,8 @@ import os,json
 from tqdm import tqdm
 from xml_to_mask_minmax import xml_to_mask,write_minmax_to_xml
 import lxml.etree as ET
+
+
 class NpEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, np.integer):

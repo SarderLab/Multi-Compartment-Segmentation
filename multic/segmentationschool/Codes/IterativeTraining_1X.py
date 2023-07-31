@@ -1,677 +1,396 @@
-import os, sys, cv2, time, random, warnings, multiprocessing#json,# detectron2
+import os,cv2, time, random, multiprocessing,json,copy
+from skimage.color import rgb2hsv,hsv2rgb,rgb2lab,lab2rgb
 import numpy as np
-import matplotlib.pyplot as plt
-import lxml.etree as ET
-from matplotlib import path
-from skimage.transform import resize
-from skimage.io import imread, imsave
-import glob
-from .getWsi import getWsi
-
-from .xml_to_mask2 import get_supervision_boxes, regions_in_mask_dots, get_vertex_points_dots, masks_from_points, restart_line 
-from joblib import Parallel, delayed
-from shutil import move
+from xml_to_mask_minmax import xml_to_mask
 # from generateTrainSet import generateDatalists
-#from subprocess import call
-#from .get_choppable_regions import get_choppable_regions
-from PIL import Image
-
+import logging
 from detectron2.utils.logger import setup_logger
+from skimage import exposure
+import json
 setup_logger()
 from detectron2 import model_zoo
-from detectron2.engine import DefaultPredictor,DefaultTrainer
+from detectron2.engine import DefaultTrainer
 from detectron2.config import get_cfg
-from detectron2.utils.visualizer import Visualizer#,ColorMode
-from detectron2.data import MetadataCatalog, DatasetCatalog
-#from detectron2.structures import BoxMode
-from .get_dataset_list import HAIL2Detectron, samples_from_json, samples_from_json_mini
-#from detectron2.checkpoint import DetectionCheckpointer
-#from detectron2.modeling import build_model
+# from detectron2.data import MetadataCatalog, DatasetCatalog
+from detectron2.data import detection_utils as utils
+import detectron2.data.transforms as T
 
-"""
+from detectron2.data import (DatasetCatalog,
+    MetadataCatalog,
+    build_detection_test_loader,
+    build_detection_train_loader,
+)
+from detectron2.evaluation import COCOEvaluator
+from detectron2.config import configurable
+from typing import List, Optional, Union
+import torch
 
-Code for - cutting / augmenting / training CNN
+# sys.append("..")
+# import detectron2_custom2.detectron2
+from .engine.hooks import LossEvalHook
+from wsi_loader_utils import *
+from imgaug import augmenters as iaa
 
-This uses WSI and XML files to train 2 neural networks for semantic segmentation
-    of histopath tissue via human in the loop training
 
-"""
-
+global seq
+seq = iaa.Sequential([
+    iaa.Sometimes(0.5,iaa.OneOf([
+        iaa.AddElementwise((-15,15),per_channel=0.5),
+        iaa.ImpulseNoise(0.05),iaa.CoarseDropout(0.02, size_percent=0.5)])),
+    iaa.Sometimes(0.5,iaa.OneOf([iaa.GaussianBlur(sigma=(0, 3.0)),
+        iaa.Sharpen(alpha=(0.0, 1.0), lightness=(0.75, 2.0))]))
+])
 
 #Record start time
 totalStart=time.time()
 
 def IterateTraining(args):
-    ## calculate low resolution block params
-    downsampleLR = int(args.downsampleRateLR**.5) #down sample for each dimension
-    region_sizeLR = int(args.boxSizeLR*(downsampleLR)) #Region size before downsampling
-    stepLR = int(region_sizeLR*(1-args.overlap_percentLR)) #Step size before downsampling
-    ## calculate low resolution block params
-    downsampleHR = int(args.downsampleRateHR**.5) #down sample for each dimension
-    region_sizeHR = int(args.boxSizeHR*(downsampleHR)) #Region size before downsampling
-    stepHR = int(region_sizeHR*(1-args.overlap_percentHR)) #Step size before downsampling
 
-
-    global classNum_HR,classEnumLR,classEnumHR 
+    
+    region_size = int(args.boxSize) #Region size before downsampling
+    
     dirs = {'imExt': '.jpeg'}
     dirs['basedir'] = args.base_dir
     dirs['maskExt'] = '.png'
-    dirs['modeldir'] = '/MODELS/'
-    dirs['tempdirLR'] = '/TempLR/'
-    dirs['tempdirHR'] = '/TempHR/'
-    dirs['pretraindir'] = '/Deeplab_network/'
-    dirs['training_data_dir'] = '/TRAINING_data/'
-    dirs['model_init'] = 'deeplab_resnet.ckpt'
-    dirs['project']= '/' + args.project
-    dirs['data_dir_HR'] = args.base_dir +'/' + args.project + '/Permanent/HR/'
-    dirs['data_dir_LR'] = args.base_dir +'/' +args.project + '/Permanent/LR/'
+    dirs['training_data_dir'] = args.training_data_dir
+    dirs['val_data_dir'] = args.val_data_dir
 
 
-    ##All folders created, initiate WSI loading by human
-    #raw_input('Please place WSIs in ')
 
-    ##Check iteration session
 
-    currentmodels=os.listdir(dirs['basedir'] + dirs['project'] + dirs['modeldir'])
     print('Handcoded iteration')
-    # currentAnnotationIteration=check_model_generation(dirs)
-    currentAnnotationIteration=2
-    print('Current training session is: ' + str(currentAnnotationIteration))
 
-    ##Create objects for storing class distributions
-    annotatedXMLs=glob.glob(dirs['basedir'] + dirs['project'] + dirs['training_data_dir'] + str(currentAnnotationIteration) + '/*.xml')
-    classes=[]
+    print(args.gpu,'gpu hehehehehe')
+    os.environ["CUDA_VISIBLE_DEVICES"]=args.gpu
+    os.environ["CUDA_LAUNCH_BLOCKING"] ='1'
 
-
-    if args.classNum == 0:
-        for xml in annotatedXMLs:
-            classes.append(get_num_classes(xml))
-
-        classNum_HR = max(classes)
+    organType='kidney'
+    print('Organ meta being set to... '+ organType)
+    if organType=='liver':
+        classnames=['Background','BD','A']
+        isthing=[0,1,1]
+        xml_color = [[0,255,0], [0,255,255], [0,0,255]]
+        tc=['BD','AT']
+        sc=['Ob','B']
+    elif organType =='kidney':
+        classnames=['interstitium','medulla','glomerulus','sclerotic glomerulus','tubule','arterial tree']
+        classes={}
+        isthing=[0,0,1,1,1,1]
+        xml_color = [[0,255,0], [0,255,255], [255,255,0],[0,0,255], [255,0,0], [0,128,255]]
+        tc=['G','SG','T','A']
+        sc=['Ob','I','M','B']
     else:
-        classNum_LR = args.classNum
-        if args.classNum_HR != 0:
-            classNum_HR = args.classNum_HR
-        else:
-            classNum_HR = classNum_LR
-
-    classNum_HR=args.classNum
-
-    ##for all WSIs in the initiating directory:
-    if args.chop_data == 'True':
-        print('Chopping')
-
-        start=time.time()
-        size_data=[]
-
-        for xmlID in annotatedXMLs:
-
-            #Get unique name of WSI
-            fileID=xmlID.split('/')[-1].split('.xml')[0]
-            print('-----------------'+fileID+'----------------')
-            #create memory addresses for wsi files
-            for ext in [args.wsi_ext]:
-                wsiID=dirs['basedir'] + dirs['project']+  dirs['training_data_dir'] + str(currentAnnotationIteration) +'/'+ fileID + ext
-
-                #Ensure annotations exist
-                if os.path.isfile(wsiID)==True:
-                    break
-
-
-            #Load openslide information about WSI
-            if ext != '.tif':
-                slide=getWsi(wsiID)
-                #WSI level 0 dimensions (largest size)
-                dim_x,dim_y=slide.dimensions
-            else:
-                im = Image.open(wsiID)
-                dim_x, dim_y=im.size
-            location=[0,0]
-            size=[dim_x,dim_y]
-            tree = ET.parse(xmlID)
-            root = tree.getroot()
-            box_supervision_layers=['8']
-            # calculate region bounds
-            global_bounds = {'x_min' : location[0], 'y_min' : location[1], 'x_max' : location[0] + size[0], 'y_max' : location[1] + size[1]}
-            local_bounds = get_supervision_boxes(root,box_supervision_layers)
-            num_cores = multiprocessing.cpu_count()
-            Parallel(n_jobs=num_cores)(delayed(chop_suey_bounds)(args=args,wsiID=wsiID,
-                dirs=dirs,lb=lb,xmlID=xmlID,box_supervision_layers=box_supervision_layers) for lb in tqdm(local_bounds))
-            # for lb in tqdm(local_bounds):
-
-                # size_data.extend(image_sizes)
-
-            '''
-            wsi_mask=xml_to_mask(xmlID, [0,0], [dim_x,dim_y])
+        print('Provided organType not in supported types: kidney, liver')
 
 
 
-            #Enumerate cpu core count
-            num_cores = multiprocessing.cpu_count()
+    classNum=len(tc)+len(sc)-1
+    print('Number classes: '+ str(classNum))
+    classes={}
 
-            #Generate iterators for parallel chopping of WSIs in high resolution
-            #index_yHR=range(30240,dim_y-stepHR,stepHR)
-            #index_xHR=range(840,dim_x-stepHR,stepHR)
-            index_yHR=range(0,dim_y,stepHR)
-            index_xHR=range(0,dim_x,stepHR)
-            index_yHR[-1]=dim_y-stepHR
-            index_xHR[-1]=dim_x-stepHR
-            #Create memory address for chopped images high resolution
-            outdirHR=dirs['basedir'] + dirs['project'] + dirs['tempdirHR']
-
-            #Perform high resolution chopping in parallel and return the number of
-            #images in each of the labeled classes
-            chop_regions=get_choppable_regions(wsi=wsiID,
-                index_x=index_xHR,index_y=index_yHR,boxSize=region_sizeHR,white_percent=args.white_percent)
-
-            Parallel(n_jobs=num_cores)(delayed(return_region)(args=args,
-                wsi_mask=wsi_mask, wsiID=wsiID,
-                fileID=fileID, yStart=j, xStart=i, idxy=idxy,
-                idxx=idxx, downsampleRate=args.downsampleRateHR,
-                outdirT=outdirHR, region_size=region_sizeHR,
-                dirs=dirs, chop_regions=chop_regions,classNum_HR=classNum_HR) for idxx,i in enumerate(index_xHR) for idxy,j in enumerate(index_yHR))
-
-            #for idxx,i in enumerate(index_xHR):
-            #    for idxy,j in enumerate(index_yHR):
-            #        if chop_regions[idxy,idxx] != 0:
-            #            return_region(args=args,xmlID=xmlID, wsiID=wsiID, fileID=fileID, yStart=j, xStart=i,idxy=idxy, idxx=idxx,
-            #            downsampleRate=args.downsampleRateHR,outdirT=outdirHR, region_size=region_sizeHR, dirs=dirs,
-            #            chop_regions=chop_regions,classNum_HR=classNum_HR)
-            #        else:
-            #            print('pass')
+    for idx,c in enumerate(classnames):
+        classes[idx]={'isthing':isthing[idx],'color':xml_color[idx]}
 
 
-        # exit()
-        print('Time for WSI chopping: ' + str(time.time()-start))
+    num_images=args.batch_size*args.train_steps
+    # slide_idxs=train_dset.get_random_slide_idx(num_images)
+    usable_slides=get_slide_data(args, wsi_directory = dirs['training_data_dir'])
+    print('Number of slides:', len(usable_slides))
+    usable_idx=range(0,len(usable_slides))
+    slide_idxs=random.choices(usable_idx,k=num_images)
+    image_coordinates=get_random_chops(slide_idxs,usable_slides,region_size)
+  
+    
+    
+    usable_slides_val=get_slide_data(args, wsi_directory=dirs['val_data_dir'])
+    
+    usable_idx_val=range(0,len(usable_slides_val))
+    slide_idxs_val=random.choices(usable_idx_val,k=int(args.batch_size*args.train_steps/100))
+    image_coordinates_val=get_random_chops(slide_idxs_val,usable_slides_val,region_size)
 
-        classEnumHR=np.ones([classNum_HR,1])*classNum_HR
-
-        ##High resolution augmentation
-        #Enumerate high resolution class distribution
-        classDistHR=np.zeros(len(classEnumHR))
-        for idx,value in enumerate(classEnumHR):
-            classDistHR[idx]=value/sum(classEnumHR)
-        print(classDistHR)
-        #Define number of augmentations per class
-
-        moveimages(dirs['basedir']+dirs['project'] + dirs['tempdirHR'] + '/regions/', dirs['basedir']+dirs['project'] + '/Permanent/HR/regions/')
-        moveimages(dirs['basedir']+dirs['project'] + dirs['tempdirHR'] + '/masks/',dirs['basedir']+dirs['project'] + '/Permanent/HR/masks/')
-
-
-        #Total time
-        print('Time for high resolution augmenting: ' + str((time.time()-totalStart)/60) + ' minutes.')
-        '''
-
-    # with open('sizes.csv','w',newline='') as myfile:
-    #     wr=csv.writer(myfile,quoting=csv.QUOTE_ALL)
-    #     wr.writerow(size_data)
-    # pretrain_HR=get_pretrain(currentAnnotationIteration,'/HR/',dirs)
-
-    modeldir_HR = dirs['basedir']+dirs['project'] + dirs['modeldir'] + str(currentAnnotationIteration+1) + '/HR/'
-
-
-    ##### HIGH REZ ARGS #####
-    dirs['outDirAIHR']=dirs['basedir']+'/'+dirs['project'] + '/Permanent/HR/regions/'
-    dirs['outDirAMHR']=dirs['basedir']+'/'+dirs['project'] + '/Permanent/HR/masks/'
-
-
-    numImagesHR=len(glob.glob(dirs['outDirAIHR'] + '*' + dirs['imExt']))
-
-    numStepsHR=(args.epoch_HR*numImagesHR)/ args.CNNbatch_sizeHR
-
-
-    #-----------------------------------------------------------------------------------------
-    # os.environ["CUDA_VISIBLE_DEVICES"]='0'
-    os.environ["CUDA_VISIBLE_DEVICES"]=str(args.gpu)
-    # img_dir='/hdd/bg/Detectron2/chop_detectron/Permanent/HR'
-
-    img_dir=dirs['outDirAIHR']
-    classnames=['Background','BD','A']
-    isthing=[0,1,1]
-    xml_color = [[0,255,0], [0,255,255], [0,0,255]]
-
-    rand_sample=True
-
-    json_file=img_dir+'/detectron_train.json'
-    HAIL2Detectron(img_dir,rand_sample,json_file,classnames,isthing,xml_color)
-    tc=['BD','AT']
-    sc=['I','B']
-    #### From json
-    DatasetCatalog.register("my_dataset", lambda:samples_from_json(json_file,rand_sample))
+    
+    
+    DatasetCatalog.register("my_dataset", lambda:train_samples_from_WSI(args,image_coordinates))
     MetadataCatalog.get("my_dataset").set(thing_classes=tc)
     MetadataCatalog.get("my_dataset").set(stuff_classes=sc)
+    
 
-    seg_metadata=MetadataCatalog.get("my_dataset")
 
-
-    # new_list = DatasetCatalog.get("my_dataset")
-    # print(len(new_list))
-    # for d in random.sample(new_list, 100):
-    #
-    #     img = cv2.imread(d["file_name"])
-    #     visualizer = Visualizer(img[:, :, ::-1],metadata=seg_metadata, scale=0.5)
-    #     out = visualizer.draw_dataset_dict(d)
-    #     cv2.namedWindow("output", cv2.WINDOW_NORMAL)
-    #     cv2.imshow("output",out.get_image()[:, :, ::-1])
-    #     cv2.waitKey(0) # waits until a key is pressed
-    #     cv2.destroyAllWindows()
-    # exit()
     cfg = get_cfg()
     cfg.merge_from_file(model_zoo.get_config_file("COCO-PanopticSegmentation/panoptic_fpn_R_50_3x.yaml"))
     cfg.DATASETS.TRAIN = ("my_dataset")
-    cfg.DATASETS.TEST = ()
+
+    cfg.TEST.EVAL_PERIOD=args.eval_period
+    cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.50
     num_cores = multiprocessing.cpu_count()
-    cfg.DATALOADER.NUM_WORKERS = num_cores-3
-    # cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-PanopticSegmentation/panoptic_fpn_R_50_3x.yaml")  # Let training initialize from model zoo
+    cfg.DATALOADER.NUM_WORKERS = 10
 
-    cfg.MODEL.WEIGHTS = os.path.join('/hdd/bg/Detectron2/HAIL_Detectron2/liver/MODELS/0/HR', "model_final.pth")
+    if args.init_modelfile:
+        cfg.MODEL.WEIGHTS = args.init_modelfile
+    else:
+        cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-PanopticSegmentation/panoptic_fpn_R_50_3x.yaml")  # Let training initialize from model zoo
 
-    cfg.SOLVER.IMS_PER_BATCH = 10
+
+    cfg.SOLVER.IMS_PER_BATCH = args.batch_size
 
 
-    # cfg.SOLVER.BASE_LR = 0.02  # pick a good LR
-    # cfg.SOLVER.LR_policy='steps_with_lrs'
-    # cfg.SOLVER.MAX_ITER = 50000
-    # cfg.SOLVER.STEPS = [30000,40000]
-    # # cfg.SOLVER.STEPS = []
-    # cfg.SOLVER.LRS = [0.002,0.0002]
-
-    cfg.SOLVER.BASE_LR = 0.002  # pick a good LR
     cfg.SOLVER.LR_policy='steps_with_lrs'
-    cfg.SOLVER.MAX_ITER = 200000
-    cfg.SOLVER.STEPS = [150000,180000]
-    # cfg.SOLVER.STEPS = []
-    cfg.SOLVER.LRS = [0.0002,0.00002]
-
-    # cfg.INPUT.CROP.ENABLED = True
-    # cfg.INPUT.CROP.TYPE='absolute'
-    # cfg.INPUT.CROP.SIZE=[100,100]
-    cfg.MODEL.BACKBONE.FREEZE_AT = 0
-    # cfg.MODEL.ANCHOR_GENERATOR.SIZES = [[4],[8],[16], [32], [64], [64], [64]]
-    # cfg.MODEL.RPN.IN_FEATURES = ['p2', 'p2', 'p2', 'p3','p4','p5','p6']
-    cfg.MODEL.ANCHOR_GENERATOR.ASPECT_RATIOS = [[0.33, 0.5, 1.0, 2.0, 3.0]]
+    cfg.SOLVER.MAX_ITER = args.train_steps
+    cfg.SOLVER.BASE_LR = 0.00025  # pick a good LR
+    cfg.SOLVER.LRS = [0.000025,0.0000025]
+    cfg.SOLVER.STEPS = [70000,90000]
+    cfg.MODEL.ANCHOR_GENERATOR.SIZES = [[32],[64],[128], [256], [512], [1024]]
+    cfg.MODEL.RPN.IN_FEATURES = ['p2', 'p3', 'p4', 'p5','p6','p6']
+    cfg.MODEL.ANCHOR_GENERATOR.ASPECT_RATIOS = [[.1,.2,0.33, 0.5, 1.0, 2.0, 3.0,5,10]]
     cfg.MODEL.ANCHOR_GENERATOR.ANGLES=[-90,-60,-30,0,30,60,90]
-
-    cfg.MODEL.RPN.POSITIVE_FRACTION = 0.75
-
     cfg.MODEL.ROI_HEADS.NUM_CLASSES = len(tc)
     cfg.MODEL.SEM_SEG_HEAD.NUM_CLASSES =len(sc)
-
-
-    # cfg.INPUT.CROP.ENABLED = True
-    # cfg.INPUT.CROP.TYPE='absolute'
-    # cfg.INPUT.CROP.SIZE=[64,64]
-
-    cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 256  # faster, and good enough for this toy dataset (default: 512)
-    # cfg.MODEL.ROI_HEADS.NUM_CLASSES = 4  # only has one class (ballon). (see https://detectron2.readthedocs.io/tutorials/datasets.html#update-the-config-for-new-datasets)
-
+    cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 64
     cfg.DATALOADER.FILTER_EMPTY_ANNOTATIONS=False
-    cfg.INPUT.MIN_SIZE_TRAIN=0
-    # cfg.INPUT.MAX_SIZE_TRAIN=500
+    cfg.INPUT.MIN_SIZE_TRAIN=args.boxSize
+    cfg.INPUT.MAX_SIZE_TRAIN=args.boxSize
 
-    # exit()
+    def real_data(args,image_coordinates_val):
+
+        all_list=[]
+        for one in train_samples_from_WSI(args,image_coordinates_val):
+            dataset_dict = one
+            c=dataset_dict['coordinates']
+            h=dataset_dict['height']
+            w=dataset_dict['width']
+            maskData=xml_to_mask(dataset_dict['xml_loc'], c, [h,w])
+            dataset_dict['annotations'] = mask2polygons(maskData)
+            all_list.append(dataset_dict)
+
+        return all_list
+
+        
+    DatasetCatalog.register("my_dataset_val", lambda:real_data(args,image_coordinates_val,cfg))
+    MetadataCatalog.get("my_dataset_val").set(thing_classes=tc)
+    MetadataCatalog.get("my_dataset_val").set(stuff_classes=sc)
+
+    cfg.DATASETS.TEST = ("my_dataset_val",)
+
     os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
     with open(cfg.OUTPUT_DIR+"/config_record.yaml", "w") as f:
         f.write(cfg.dump())   # save config to file
-    trainer = DefaultTrainer(cfg)
+    trainer = Trainer(cfg)
+
     trainer.resume_or_load(resume=False)
+
     trainer.train()
 
-    cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "model_final.pth")  # path to the model we just trained
-    cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.01   # set a custom testing threshold
-    cfg.TEST.DETECTIONS_PER_IMAGE = 500
-    #
-    # cfg.INPUT.MIN_SIZE_TRAIN=64
-    # cfg.INPUT.MAX_SIZE_TRAIN=4000
-    cfg.INPUT.MIN_SIZE_TEST=64
-    cfg.INPUT.MAX_SIZE_TEST=500
 
 
-    predict_samples=100
-    predictor = DefaultPredictor(cfg)
-
-    dataset_dicts = samples_from_json_mini(json_file,predict_samples)
-    iter=0
-    if not os.path.exists(os.getcwd()+'/network_predictions/'):
-        os.mkdir(os.getcwd()+'/network_predictions/')
-    for d in random.sample(dataset_dicts, predict_samples):
-        # print(d["file_name"])
-        # imclass=d["file_name"].split('/')[-1].split('_')[-5].split(' ')[-1]
-        # if imclass in ["TRI","HE"]:
-        im = cv2.imread(d["file_name"])
-        panoptic_seg, segments_info = predictor(im)["panoptic_seg"]  # format is documented at https://detectron2.readthedocs.io/tutorials/models.html#model-output-format
-        # print(segments_info)
-        # plt.imshow(panoptic_seg.to("cpu"))
-        # plt.show()
-        v = Visualizer(im[:, :, ::-1], seg_metadata, scale=1.2)
-        v = v.draw_panoptic_seg_predictions(panoptic_seg.to("cpu"), segments_info)
-        # panoptic segmentation result
-        # plt.ion()
-        plt.subplot(121)
-        plt.imshow(im[:, :, ::-1])
-        plt.subplot(122)
-        plt.imshow(v.get_image())
-        plt.savefig(f"./network_predictions/input_{iter}.jpg",dpi=300)
-        plt.show()
-        # plt.ioff()
+    print('\nTraining completed, You can now run [--option predict]\033[0m\n')
 
 
-        # v = Visualizer(im[:, :, ::-1],
-        #                metadata=seg_metadata,
-        #                scale=0.5,
-        # )
-        # out = v.draw_panoptic_seg_predictions(panoptic_seg.to("cpu"),segments_info)
+def mask2polygons(mask):
+    annotation=[]
+    presentclasses=np.unique(mask)
+    offset=-3
+    presentclasses=presentclasses[presentclasses>2]
+    presentclasses=list(presentclasses[presentclasses<7])
+    for p in presentclasses:
+        contours, hierarchy = cv2.findContours(np.array(mask==p, dtype='uint8'), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        for contour in contours:
+            if contour.size>=6:
+                instance_dict={}
+                contour_flat=contour.flatten().astype('float').tolist()
+                xMin=min(contour_flat[::2])
+                yMin=min(contour_flat[1::2])
+                xMax=max(contour_flat[::2])
+                yMax=max(contour_flat[1::2])
+                instance_dict['bbox']=[xMin,yMin,xMax,yMax]
+                instance_dict['bbox_mode']=BoxMode.XYXY_ABS.value
+                instance_dict['category_id']=p+offset
+                instance_dict['segmentation']=[contour_flat]
+                annotation.append(instance_dict)
+    return annotation
 
-        # imsave('./network_predictions/pred'+str(iter)+'.png',np.hstack((im,v.get_image())))
-        iter=iter+1
-        # cv2.imshow('',out.get_image()[:, :, ::-1])
-        # cv2.waitKey(0) # waits until a key is pressed
-        # cv2.destroyAllWindows()
-    #-----------------------------------------------------------------------------------------
+class Trainer(DefaultTrainer):
 
-    finish_model_generation(dirs,currentAnnotationIteration)
+    @classmethod
+    def build_test_loader(cls, cfg, dataset_name):
+        return build_detection_test_loader(cfg, dataset_name, mapper=CustomDatasetMapper(cfg, True))
 
-    print('\n\n\033[92;5mPlease place new wsi file(s) in: \n\t' + dirs['basedir'] + dirs['project']+ dirs['training_data_dir'] + str(currentAnnotationIteration+1))
-    print('\nthen run [--option predict]\033[0m\n')
+    @classmethod
+    def build_train_loader(cls, cfg):
+        return build_detection_train_loader(cfg, mapper=CustomDatasetMapper(cfg, True))
 
+    @classmethod
+    def build_evaluator(cls, cfg, dataset_name, output_folder=None):
+        if output_folder is None:
+            output_folder = os.path.join(cfg.OUTPUT_DIR, "inference")
+        return COCOEvaluator(dataset_name, cfg, True, output_folder)
+                     
+    def build_hooks(self):
+        hooks = super().build_hooks()
+        hooks.insert(-1,LossEvalHook(
+            self.cfg.TEST.EVAL_PERIOD,
+            self.model,
+            build_detection_test_loader(
+                self.cfg,
+                self.cfg.DATASETS.TEST[0],
+                CustomDatasetMapper(self.cfg, True)
+            )
+        ))
+        return hooks
 
+class CustomDatasetMapper:
 
+    @configurable
+    def __init__(
+        self,
+        is_train: bool,
+        *,
+        augmentations: List[Union[T.Augmentation, T.Transform]],
+        image_format: str,
+        use_instance_mask: bool = False,
+        use_keypoint: bool = False,
+        instance_mask_format: str = "polygon",
+        keypoint_hflip_indices: Optional[np.ndarray] = None,
+        precomputed_proposal_topk: Optional[int] = None,
+        recompute_boxes: bool = False,
+    ):
+        """
+        NOTE: this interface is experimental.
 
-def moveimages(startfolder,endfolder):
-    filelist=glob.glob(startfolder + '*')
-    for file in filelist:
-        fileID=file.split('/')[-1]
-        move(file,endfolder + fileID)
+        Args:
+            is_train: whether it's used in training or inference
+            augmentations: a list of augmentations or deterministic transforms to apply
+            image_format: an image format supported by :func:`detection_utils.read_image`.
+            use_instance_mask: whether to process instance segmentation annotations, if available
+            use_keypoint: whether to process keypoint annotations if available
+            instance_mask_format: one of "polygon" or "bitmask". Process instance segmentation
+                masks into this format.
+            keypoint_hflip_indices: see :func:`detection_utils.create_keypoint_hflip_indices`
+            precomputed_proposal_topk: if given, will load pre-computed
+                proposals from dataset_dict and keep the top k proposals for each image.
+            recompute_boxes: whether to overwrite bounding box annotations
+                by computing tight bounding boxes from instance mask annotations.
+        """
+        if recompute_boxes:
+            assert use_instance_mask, "recompute_boxes requires instance masks"
+        # fmt: off
+        self.is_train               = is_train
+        self.augmentations          = T.AugmentationList(augmentations)
+        self.image_format           = image_format
+        self.use_instance_mask      = use_instance_mask
+        self.instance_mask_format   = instance_mask_format
+        self.use_keypoint           = use_keypoint
+        self.keypoint_hflip_indices = keypoint_hflip_indices
+        self.proposal_topk          = precomputed_proposal_topk
+        self.recompute_boxes        = recompute_boxes
+        # fmt: on
+        logger = logging.getLogger(__name__)
+        mode = "training" if is_train else "inference"
+        logger.info(f"[DatasetMapper] Augmentations used in {mode}: {augmentations}")
 
-
-def check_model_generation(dirs):
-    modelsCurrent=os.listdir(dirs['basedir'] + dirs['project'] + dirs['modeldir'])
-    gens=map(int,modelsCurrent)
-    modelOrder=np.sort(gens)[::-1]
-
-    for idx in modelOrder:
-        #modelsChkptsLR=glob.glob(dirs['basedir'] + dirs['project'] + dirs['modeldir']+str(modelsCurrent[idx]) + '/LR/*.ckpt*')
-        modelsChkptsHR=glob.glob(dirs['basedir'] + dirs['project'] + dirs['modeldir']+ str(idx) +'/HR/*.ckpt*')
-        if modelsChkptsHR == []:
-            continue
+    @classmethod
+    def from_config(cls, cfg, is_train: bool = True):
+        augs = utils.build_augmentation(cfg, is_train)
+        if cfg.INPUT.CROP.ENABLED and is_train:
+            augs.insert(0, T.RandomCrop(cfg.INPUT.CROP.TYPE, cfg.INPUT.CROP.SIZE))
+            recompute_boxes = cfg.MODEL.MASK_ON
         else:
-            return idx
-            break
+            recompute_boxes = False
 
-def finish_model_generation(dirs,currentAnnotationIteration):
-    make_folder(dirs['basedir'] + dirs['project'] + dirs['training_data_dir'] + str(currentAnnotationIteration + 1))
+        ret = {
+            "is_train": is_train,
+            "augmentations": augs,
+            "image_format": cfg.INPUT.FORMAT,
+            "use_instance_mask": cfg.MODEL.MASK_ON,
+            "instance_mask_format": cfg.INPUT.MASK_FORMAT,
+            "use_keypoint": cfg.MODEL.KEYPOINT_ON,
+            "recompute_boxes": recompute_boxes,
+        }
 
-def get_pretrain(currentAnnotationIteration,res,dirs):
+        if cfg.MODEL.KEYPOINT_ON:
+            ret["keypoint_hflip_indices"] = utils.create_keypoint_hflip_indices(cfg.DATASETS.TRAIN)
 
-    if currentAnnotationIteration==0:
-        pretrain_file = glob.glob(dirs['basedir']+dirs['project'] + dirs['modeldir'] + str(currentAnnotationIteration) + res + '*')
-        pretrain_file=pretrain_file[0].split('.')[0] + '.' + pretrain_file[0].split('.')[1]
+        if cfg.MODEL.LOAD_PROPOSALS:
+            ret["precomputed_proposal_topk"] = (
+                cfg.DATASETS.PRECOMPUTED_PROPOSAL_TOPK_TRAIN
+                if is_train
+                else cfg.DATASETS.PRECOMPUTED_PROPOSAL_TOPK_TEST
+            )
+        return ret
 
-    else:
-        pretrains=glob.glob(dirs['basedir']+dirs['project'] + dirs['modeldir'] + str(currentAnnotationIteration) + res + 'model*')
-        maxmodel=0
-        for modelfiles in pretrains:
-            modelID=modelfiles.split('.')[-2].split('-')[1]
-            if int(modelID)>maxmodel:
-                maxmodel=int(modelID)
-        pretrain_file=dirs['basedir']+dirs['project'] + dirs['modeldir'] + str(currentAnnotationIteration) + res + 'model.ckpt-' + str(maxmodel)
-    return pretrain_file
+    def _transform_annotations(self, dataset_dict, transforms, image_shape):
+        # USER: Modify this if you want to keep them for some reason.
+        for anno in dataset_dict["annotations"]:
+            if not self.use_instance_mask:
+                anno.pop("segmentation", None)
+            if not self.use_keypoint:
+                anno.pop("keypoints", None)
 
-def restart_line(): # for printing chopped image labels in command line
-    sys.stdout.write('\r')
-    sys.stdout.flush()
+        annos = [
+            utils.transform_instance_annotations(
+                obj, transforms, image_shape, keypoint_hflip_indices=self.keypoint_hflip_indices
+            )
+            for obj in dataset_dict.pop('annotations')
+            if obj.get("iscrowd", 0) == 0
+        ]
+        instances = utils.annotations_to_instances(
+            annos, image_shape, mask_format=self.instance_mask_format
+        )
 
-def file_len(fname): # get txt file length (number of lines)
-    with open(fname) as f:
-        for i, l in enumerate(f):
-            pass
-    return i + 1
+        if self.recompute_boxes:
+            instances.gt_boxes = instances.gt_masks.get_bounding_boxes()
+        dataset_dict["instances"] = utils.filter_empty_instances(instances)
 
-def make_folder(directory):
-    if not os.path.exists(directory):
-        os.makedirs(directory) # make directory if it does not exit already # make new directory # Check if folder exists, if not make it
+    def __call__(self, dataset_dict):
+        """
+        Args:
+            dataset_dict (dict): Metadata of one image, in Detectron2 Dataset format.
 
-def make_all_folders(dirs):
+        Returns:
+            dict: a format that builtin models in detectron2 accept
+        """
+        dataset_dict = copy.deepcopy(dataset_dict)  # it will be modified by code below
+        c=dataset_dict['coordinates']
+        h=dataset_dict['height']
+        w=dataset_dict['width']
 
+        slide=openslide.OpenSlide(dataset_dict['slide_loc'])
+        image=np.array(slide.read_region((c[0],c[1]),0,(h,w)))[:,:,:3]
+        slide.close()
+        maskData=xml_to_mask(dataset_dict['xml_loc'], c, [h,w])
 
-    make_folder(dirs['basedir'] +dirs['project']+ dirs['tempdirLR'] + '/regions')
-    make_folder(dirs['basedir'] +dirs['project']+ dirs['tempdirLR'] + '/masks')
+        if random.random()>0.5:
+            hShift=np.random.normal(0,0.05)
+            lShift=np.random.normal(1,0.025)
+            # imageblock[im]=randomHSVshift(imageblock[im],hShift,lShift)
+            image=rgb2hsv(image)
+            image[:,:,0]=(image[:,:,0]+hShift)
+            image=hsv2rgb(image)
+            image=rgb2lab(image)
+            image[:,:,0]=exposure.adjust_gamma(image[:,:,0],lShift)
+            image=(lab2rgb(image)*255).astype('uint8')
+            image = seq(images=[image])[0].squeeze()
+        
+        dataset_dict['annotations']=mask2polygons(maskData)
+        utils.check_image_size(dataset_dict, image)
 
-    make_folder(dirs['basedir'] +dirs['project']+ dirs['tempdirLR'] + '/Augment' +'/regions')
-    make_folder(dirs['basedir'] +dirs['project']+ dirs['tempdirLR'] + '/Augment' +'/masks')
+        sem_seg_gt = maskData
+        sem_seg_gt[sem_seg_gt>2]=0
+        sem_seg_gt[maskData==0] = 3
+        sem_seg_gt=np.array(sem_seg_gt).astype('uint8')
+        aug_input = T.AugInput(image, sem_seg=sem_seg_gt)
+        transforms = self.augmentations(aug_input)
+        image, sem_seg_gt = aug_input.image, aug_input.sem_seg
 
-    make_folder(dirs['basedir']+dirs['project'] + dirs['tempdirHR'] + '/regions')
-    make_folder(dirs['basedir'] +dirs['project']+ dirs['tempdirHR'] + '/masks')
+        image_shape = image.shape[:2]  # h, w
+        # Pytorch's dataloader is efficient on torch.Tensor due to shared-memory,
+        # but not efficient on large generic data structures due to the use of pickle & mp.Queue.
+        # Therefore it's important to use torch.Tensor.
+        dataset_dict["image"] = torch.as_tensor(np.ascontiguousarray(image.transpose(2, 0, 1)))
+        if sem_seg_gt is not None:
+            dataset_dict["sem_seg"] = torch.as_tensor(sem_seg_gt.astype("long"))
 
-    make_folder(dirs['basedir']+dirs['project'] + dirs['tempdirHR'] + '/Augment' +'/regions')
-    make_folder(dirs['basedir']+dirs['project']+ dirs['tempdirHR'] + '/Augment' +'/masks')
+        if "annotations" in dataset_dict:
+            self._transform_annotations(dataset_dict, transforms, image_shape)
+        
 
-    make_folder(dirs['basedir'] +dirs['project']+ dirs['modeldir'])
-    make_folder(dirs['basedir'] +dirs['project']+ dirs['training_data_dir'])
-
-
-    make_folder(dirs['basedir'] +dirs['project']+ '/Permanent' +'/LR/'+ 'regions/')
-    make_folder(dirs['basedir'] +dirs['project']+ '/Permanent' +'/LR/'+ 'masks/')
-    make_folder(dirs['basedir'] +dirs['project']+ '/Permanent' +'/HR/'+ 'regions/')
-    make_folder(dirs['basedir'] +dirs['project']+ '/Permanent' +'/HR/'+ 'masks/')
-
-    make_folder(dirs['basedir'] +dirs['project']+ dirs['training_data_dir'])
-
-    make_folder(dirs['basedir'] + '/Codes/Deeplab_network/datasetLR')
-    make_folder(dirs['basedir'] + '/Codes/Deeplab_network/datasetHR')
-
-def return_region(args, wsi_mask, wsiID, fileID, yStart, xStart, idxy, idxx, downsampleRate, outdirT, region_size, dirs, chop_regions,classNum_HR): # perform cutting in parallel
-    sys.stdout.write('   <'+str(xStart)+'/'+ str(yStart)+'/'+str(chop_regions[idxy,idxx] != 0)+ '>   ')
-    sys.stdout.flush()
-    restart_line()
-
-    if chop_regions[idxy,idxx] != 0:
-
-        uniqID=fileID + str(yStart) + str(xStart)
-        if wsiID.split('.')[-1] != 'tif':
-            slide=getWsi(wsiID)
-            Im=np.array(slide.read_region((xStart,yStart),0,(region_size,region_size)))
-            Im=Im[:,:,:3]
-        else:
-            yEnd = yStart + region_size
-            xEnd = xStart + region_size
-            Im = np.zeros([region_size,region_size,3], dtype=np.uint8)
-            Im_ = imread(wsiID)[yStart:yEnd, xStart:xEnd, :3]
-            Im[0:Im_.shape[0], 0:Im_.shape[1], :] = Im_
-
-        mask_annotation=wsi_mask[yStart:yStart+region_size,xStart:xStart+region_size]
-
-        o1,o2=mask_annotation.shape
-        if o1 !=region_size:
-            mask_annotation=np.pad(mask_annotation,((0,region_size-o1),(0,0)),mode='constant')
-        if o2 !=region_size:
-            mask_annotation=np.pad(mask_annotation,((0,0),(0,region_size-o2)),mode='constant')
-
-        '''
-        if 4 in np.unique(mask_annotation):
-            plt.subplot(121)
-            plt.imshow(mask_annotation*20)
-            plt.subplot(122)
-            plt.imshow(Im)
-            pt=[xStart,yStart]
-            plt.title(pt)
-            plt.show()
-        '''
-        if downsampleRate !=1:
-            c=(Im.shape)
-            s1=int(c[0]/(downsampleRate**.5))
-            s2=int(c[1]/(downsampleRate**.5))
-            Im=resize(Im,(s1,s2),mode='reflect')
-
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            imsave(outdirT + '/regions/' + uniqID + dirs['imExt'],Im)
-            imsave(outdirT + '/masks/' + uniqID +dirs['maskExt'],mask_annotation)
-
-
-def regions_in_mask(root, bounds, verbose=1):
-    # find regions to save
-    IDs_reg = []
-    IDs_points = []
-
-    for Annotation in root.findall("./Annotation"): # for all annotations
-        annotationID = Annotation.attrib['Id']
-        annotationType = Annotation.attrib['Type']
-
-        # print(Annotation.findall(./))
-        if annotationType =='9':
-            for element in Annotation.iter('InputAnnotationId'):
-                pointAnnotationID=element.text
-
-            for Region in Annotation.findall("./*/Region"): # iterate on all region
-
-                for Vertex in Region.findall("./*/Vertex"): # iterate on all vertex in region
-                    # get points
-                    x_point = np.int32(np.float64(Vertex.attrib['X']))
-                    y_point = np.int32(np.float64(Vertex.attrib['Y']))
-                    # test if points are in bounds
-                    if bounds['x_min'] <= x_point <= bounds['x_max'] and bounds['y_min'] <= y_point <= bounds['y_max']: # test points in region bounds
-                        # save region Id
-                        IDs_points.append({'regionID' : Region.attrib['Id'], 'annotationID' : annotationID,'pointAnnotationID':pointAnnotationID})
-                        break
-        elif annotationType=='4':
-
-            for Region in Annotation.findall("./*/Region"): # iterate on all region
-
-                for Vertex in Region.findall("./*/Vertex"): # iterate on all vertex in region
-                    # get points
-                    x_point = np.int32(np.float64(Vertex.attrib['X']))
-                    y_point = np.int32(np.float64(Vertex.attrib['Y']))
-                    # test if points are in bounds
-                    if bounds['x_min'] <= x_point <= bounds['x_max'] and bounds['y_min'] <= y_point <= bounds['y_max']: # test points in region bounds
-                        # save region Id
-                        IDs_reg.append({'regionID' : Region.attrib['Id'], 'annotationID' : annotationID})
-                        break
-    return IDs_reg,IDs_points
-
-
-def get_vertex_points(root, IDs_reg,IDs_points, maskModes,excludedIDs,negativeIDs=None):
-    Regions = []
-    Points = []
-
-    for ID in IDs_reg:
-        Vertices = []
-        if ID['annotationID'] not in excludedIDs:
-            for Vertex in root.findall("./Annotation[@Id='" + ID['annotationID'] + "']/Regions/Region[@Id='" + ID['regionID'] + "']/Vertices/Vertex"):
-                Vertices.append([int(float(Vertex.attrib['X'])), int(float(Vertex.attrib['Y']))])
-            Regions.append({'Vertices':np.array(Vertices),'annotationID':ID['annotationID']})
-
-    for ID in IDs_points:
-        Vertices = []
-        for Vertex in root.findall("./Annotation[@Id='" + ID['annotationID'] + "']/Regions/Region[@Id='" + ID['regionID'] + "']/Vertices/Vertex"):
-            Vertices.append([int(float(Vertex.attrib['X'])), int(float(Vertex.attrib['Y']))])
-        Points.append({'Vertices':np.array(Vertices),'pointAnnotationID':ID['pointAnnotationID']})
-    if 'falsepositive' or 'negative' in maskModes:
-        assert negativeIDs is not None,'Negatively annotated classes must be provided for negative/falsepositive mask mode'
-        assert 'falsepositive' and 'negative' not in maskModes, 'Negative and false positive mask modes cannot both be true'
-
-    useableRegions=[]
-    if 'positive' in maskModes:
-        for Region in Regions:
-            regionPath=path.Path(Region['Vertices'])
-            for Point in Points:
-                if Region['annotationID'] not in negativeIDs:
-                    if regionPath.contains_point(Point['Vertices'][0]):
-                        Region['pointAnnotationID']=Point['pointAnnotationID']
-                        useableRegions.append(Region)
-
-    if 'negative' in maskModes:
-
-        for Region in Regions:
-            regionPath=path.Path(Region['Vertices'])
-            if Region['annotationID'] in negativeIDs:
-                if not any([regionPath.contains_point(Point['Vertices'][0]) for Point in Points]):
-                    Region['pointAnnotationID']=Region['annotationID']
-                    useableRegions.append(Region)
-    if 'falsepositive' in maskModes:
-
-        for Region in Regions:
-            regionPath=path.Path(Region['Vertices'])
-            if Region['annotationID'] in negativeIDs:
-                if not any([regionPath.contains_point(Point['Vertices'][0]) for Point in Points]):
-                    Region['pointAnnotationID']=0
-                    useableRegions.append(Region)
-
-    return useableRegions
-def chop_suey_bounds(lb,xmlID,box_supervision_layers,wsiID,dirs,args):
-    tree = ET.parse(xmlID)
-    root = tree.getroot()
-    lbVerts=np.array(lb['BoxVerts'])
-    xMin=min(lbVerts[:,0])
-    xMax=max(lbVerts[:,0])
-    yMin=min(lbVerts[:,1])
-    yMax=max(lbVerts[:,1])
-
-    # test=np.array(slide.read_region((xMin,yMin),0,(xMax-xMin,yMax-yMin)))[:,:,:3]
-
-    local_bound = {'x_min' : xMin, 'y_min' : yMin, 'x_max' : xMax, 'y_max' : yMax}
-    IDs_reg,IDs_points = regions_in_mask_dots(root=root, bounds=local_bound,box_layers=box_supervision_layers)
-
-    # find regions in bounds
-    negativeIDs=['4']
-    excludedIDs=['1']
-    falsepositiveIDs=['4']
-    usableRegions= get_vertex_points_dots(root=root, IDs_reg=IDs_reg,IDs_points=IDs_points,excludedIDs=excludedIDs,maskModes=['falsepositive','positive'],negativeIDs=negativeIDs,
-        falsepositiveIDs=falsepositiveIDs)
-
-    # image_sizes=
-    masks_from_points(usableRegions,wsiID,dirs,50,args,[xMin,xMax,yMin,yMax])
-'''
-def masks_from_points(root,usableRegions,wsiID,dirs):
-    pas_img = getWsi(wsiID)
-    image_sizes=[]
-    basename=wsiID.split('/')[-1].split('.svs')[0]
-
-    for usableRegion in tqdm(usableRegions):
-        vertices=usableRegion['Vertices']
-        x1=min(vertices[:,0])
-        x2=max(vertices[:,0])
-        y1=min(vertices[:,1])
-        y2=max(vertices[:,1])
-        points = np.stack([np.asarray(vertices[:,0]), np.asarray(vertices[:,1])], axis=1)
-        if (x2-x1)>0 and (y2-y1)>0:
-            l1=x2-x1
-            l2=y2-y1
-            xMultiplier=np.ceil((l1)/64)
-            yMultiplier=np.ceil((l2)/64)
-            pad1=int(xMultiplier*64-l1)
-            pad2=int(yMultiplier*64-l2)
-
-            points[:,1] = np.int32(np.round(points[:,1] - y1 ))
-            points[:,0] = np.int32(np.round(points[:,0] - x1 ))
-            mask = 2*np.ones([y2-y1,x2-x1], dtype=np.uint8)
-            if int(usableRegion['pointAnnotationID'])==0:
-                pass
-            else:
-                cv2.fillPoly(mask, [points], int(usableRegion['pointAnnotationID'])-4)
-            PAS = pas_img.read_region((x1,y1), 0, (x2-x1,y2-y1))
-            # print(usableRegion['pointAnnotationID'])
-            PAS = np.array(PAS)[:,:,0:3]
-            mask=np.pad( mask,((0,pad2),(0,pad1)),'constant',constant_values=(2,2) )
-            PAS=np.pad( PAS,((0,pad2),(0,pad1),(0,0)),'constant',constant_values=(0,0) )
-
-            image_identifier=basename+'_'.join(['',str(x1),str(y1),str(l1),str(l2)])
-            mask_out_name=dirs['basedir']+dirs['project'] + '/Permanent/HR/masks/'+image_identifier+'.png'
-            image_out_name=mask_out_name.replace('/masks/','/regions/')
-            # basename + '_' + str(image_identifier) + args.imBoxExt
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                imsave(image_out_name,PAS)
-                imsave(mask_out_name,mask)
-            # exit()
-            # extract image region
-            # plt.subplot(121)
-            # plt.imshow(PAS)
-            # plt.subplot(122)
-            # plt.imshow(mask)
-            # plt.show()
-            # image_sizes.append([x2-x1,y2-y1])
-        else:
-            print('Broken region')
-    return image_sizes
-'''
+        return dataset_dict

@@ -4,7 +4,7 @@
   <title>Multi Compartment Segmentation</title>
   <description>Segments multi-level structures from a whole-slide image</description>
   <version>0.1.0</version>
-  <documentation-url>https://github.com/SarderLab/deeplab-WSI</documentation-url>
+  <documentation-url>https://github.com/SarderLab/Multi-Compartment-Segmentation</documentation-url>
   <license>Apache 2.0</license>
   <contributor>Sayat Mimar (UFL)</contributor>
   <acknowledgements>This work is part of efforts in digital pathology by the Sarder Lab: UFL.</acknowledgements>

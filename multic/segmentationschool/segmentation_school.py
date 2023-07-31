@@ -188,6 +188,18 @@ if __name__ == '__main__':
         help='number of classes present in the High res training data [USE ONLY IF DIFFERENT FROM LOW RES]')
     parser.add_argument('--modelfile', dest='modelfile', default=None ,type=str,
         help='the desired model file to use for training or prediction')
+    parser.add_argument('--init_modelfile', dest='init_modelfile', default=None ,type=str,
+        help='the desired model file to use for training or prediction')
+    parser.add_argument('--eval_period', dest='eval_period', default=1000 ,type=int,
+        help='Validation Period')
+    parser.add_argument('--batch_size', dest='batch_size', default=4 ,type=int,
+        help='Size of batches for training high resolution CNN')
+    parser.add_argument('--train_steps', dest='train_steps', default=1000 ,type=int,
+        help='Size of batches for training high resolution CNN')
+    parser.add_argument('--training_data_dir', dest='base_dir', default=os.getcwd(),type=str,
+        help='Training Data Folder')
+    parser.add_argument('--val_data_dir', dest='base_dir', default=os.getcwd(),type=str,
+        help='Validation Data Folder')
 
     ### Params for cutting wsi ###
     #White level cutoff
@@ -205,7 +217,7 @@ if __name__ == '__main__':
     #High resolution parameters
     parser.add_argument('--overlap_percentHR', dest='overlap_percentHR', default=0 ,type=float,
         help='overlap percentage of high resolution blocks [0-1]')
-    parser.add_argument('--boxSize', dest='boxSize', default=2048 ,type=int,
+    parser.add_argument('--boxSize', dest='boxSize', default=1200 ,type=int,
         help='size of high resolution blocks')
     parser.add_argument('--downsampleRateHR', dest='downsampleRateHR', default=1 ,type=int,
         help='reduce image resolution to 1/downsample rate')

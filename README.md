@@ -1,12 +1,12 @@
 # Multi Compartment Segmentation
 
-Multi compartment segmentation is a [detectron2](https://github.com/facebookresearch/detectron2) based panoptic segmentation model that is implemented as a pipeline in [Digital Slide Archive](https://athena.rc.ufl.edu/) (DSA) developed and maintained by [CMI lab](https://cmilab.nephrology.medicine.ufl.edu/) at the University of Florida. This DSA plugin allows users to segment a kidney Whole Slide Image (WSI) into 6 compartments, namely: Interstitium,medulla, glomerulus, sclerotic glomerulus, tubule, and arterial tree.
+Multi compartment segmentation is a [detectron2](https://github.com/facebookresearch/detectron2) based panoptic segmentation model that is implemented as a pipeline in [Digital Slide Archive](https://athena.rc.ufl.edu/) (DSA) developed and maintained by [CMI lab](https://cmilab.nephrology.medicine.ufl.edu/) at the University of Florida. This DSA plugin allows users to segment a kidney Whole Slide Image (WSI) into 6 compartments, namely: cortical interstitium, medullary interstitium, non-sclerotic glomerulus, sclerotic glomerulus, tubule, and artery/arteriole.
 
 ## Quick Start Guide
 
 This DSA plugin allows users to run image analysis jobs through the HistomicsUI by the following steps:
 
-1. Create an account at [DSA](https://athena.rc.ufl.edu/) and log in with your credentials. Please contact Sayat Mimar at sayat.mimar@ufl.edu for obtaining a DSA account.
+1. Create an account at [DSA](https://athena.rc.ufl.edu/) and log in with your credentials.
 2. Upload a WSI in a folder either unders Collections tab or in your User directory
 3. Open the image in HistomicsUI by clicking the arrow icon:
 
@@ -20,8 +20,7 @@ This DSA plugin allows users to run image analysis jobs through the HistomicsUI 
 
 <img src="figures/fig3.png"  width="60%" height="30%">
 
-6. You can see the logs of the running job and the segmentation progress by clicking the job that you just started from the Jobs Section.
-7. Once the job sucessfuly runs, the segmented compartments will appear on top of the image. You can visuazlie them all or one-by-one by selecting the layers you wish to view from Annotations/Other tab on the right.
+6. Once the job sucessfuly runs, the segmented compartments will appear on top of the image. You can visuazlie them all or one-by-one by selecting the layers you wish to view from Annotations/Other tab on the right.
 
 
 # See Also

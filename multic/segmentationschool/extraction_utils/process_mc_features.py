@@ -14,7 +14,7 @@ GLOM_DICT = {3:'Glomeruli',4:'Sclerotic Glomeruli'}
 def process_glom_features(mask_xml, glom_value, MOD, slide, mpp, h_threshold, saturation_threshold):
 
     glomeruli = mask_xml == glom_value
-    glomeruli = np.copy(glomeruli.astype(np.uint8))
+    glomeruli = glomeruli.astype(np.uint8)
     glomeruli = measure.label(glomeruli)
     glomeruli_unique_max = np.max(glomeruli)
     gloms = np.zeros((glomeruli_unique_max,7))
@@ -68,7 +68,7 @@ def process_glom_features(mask_xml, glom_value, MOD, slide, mpp, h_threshold, sa
 def process_tubules_features(mask_xml, tub_value, MOD, slide, mpp, whitespace_threshold):
 
     tubules = mask_xml == tub_value
-    tubules = np.copy(tubules.astype(np.uint8))
+    tubules = tubules.astype(np.uint8)
     tubules = measure.label(tubules)
     tubules_unique_max = np.max(tubules)
     tubs = np.zeros((tubules_unique_max,7))
@@ -172,7 +172,7 @@ def process_tubules_features(mask_xml, tub_value, MOD, slide, mpp, whitespace_th
 def process_arteriol_features(mask_xml, art_value, mpp):
 
     arteries = mask_xml == art_value
-    arteries = np.copy(arteries.astype(np.uint8))
+    arteries = arteries.astype(np.uint8)
     arteries = measure.label(arteries)
     arts_unique_max = np.max(arteries)
     arts = np.zeros((arts_unique_max,5))

@@ -1,4 +1,4 @@
-import openslide,glob,os, json
+import glob, os
 import numpy as np
 from scipy.ndimage.morphology import binary_fill_holes
 from skimage.color import rgb2hsv
@@ -8,6 +8,7 @@ from skimage.io import imread,imsave
 import multiprocessing
 from joblib import Parallel, delayed
 from shapely.geometry import Polygon
+from tiffslide import TiffSlide
 import random
 import glob
 import warnings
@@ -16,26 +17,12 @@ import multiprocessing
 from .xml_to_mask_minmax import write_minmax_to_xml
 import lxml.etree as ET
 
-
-class NpEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, torch.Tensor):
-            return list(obj.cpu().numpy())
-        if isinstance(obj, np.integer):
-            return int(obj)
-        if isinstance(obj, np.floating):
-            return float(obj)
-        if isinstance(obj, np.ndarray):
-            return obj.tolist()
-        return super(NpEncoder, self).default(obj)
-
 def get_image_meta(i,args):
     image_annotation_info={}
-    # image_annotation_info['slide_loc']=train_dset.get_single_slide_data(i[0])
     image_annotation_info['slide_loc']=i[0]
-    slide=openslide.OpenSlide(image_annotation_info['slide_loc'])
-    magx=np.round(float(slide.properties['openslide.mpp-x']),2)
-    magy=np.round(float(slide.properties['openslide.mpp-y']),2)
+    slide=TiffSlide(image_annotation_info['slide_loc'])
+    magx=np.round(float(slide.properties['tiffslide.mpp-x']),2)
+    magy=np.round(float(slide.properties['tiffslide.mpp-y']),2)
 
     assert magx == magy
     if magx ==0.25:
@@ -92,7 +79,7 @@ def WSIGridIterator(wsi_name,choppable_regions,index_x,index_y,region_size,dim_x
 def get_slide_data(args, wsi_directory=None):
         assert wsi_directory is not None, 'location of training svs and xml must be provided'
 
-        mask_out_loc=os.path.join(wsi_directory.replace('/TRAINING_data/0','Permanent/Tissue_masks/'),)
+        mask_out_loc=os.path.join(wsi_directory, 'Tissue_masks')
         if not os.path.exists(mask_out_loc):
             os.makedirs(mask_out_loc)
         all_slides=[]
@@ -108,11 +95,11 @@ def get_slide_data(args, wsi_directory=None):
                 write_minmax_to_xml(xmlpath)
 
                 print("Gathering slide data ... "+ slideID,end='\r')
-                slide=openslide.OpenSlide(slide_loc)
+                slide =TiffSlide(slide_loc)
                 chop_array=get_choppable_regions(slide,args,slideID,slideExt,mask_out_loc)
 
-                mag_x=np.round(float(slide.properties['openslide.mpp-x']),2)
-                mag_y=np.round(float(slide.properties['openslide.mpp-y']),2)
+                mag_x=np.round(float(slide.properties['tiffslide.mpp-x']),2)
+                mag_y=np.round(float(slide.properties['tiffslide.mpp-y']),2)
                 slide.close()
                 tree = ET.parse(xmlpath)
                 root = tree.getroot()
@@ -135,8 +122,8 @@ def get_slide_data(args, wsi_directory=None):
 
                 usable_slides.append({'slide_loc':slide_loc,'slideID':slideID,
                     'chop_array':chop_array,'num_regions':len(chop_array),'mag':[mag_x,mag_y],
-                    'xml_loc':xmlpath,'annotations':classNums,'root':root,
-                    'thumb_loc':os.path.join(mask_out_loc,'_'.join([slideID,slideExt[1:]+'.jpeg']))})
+                    'xml_loc':xmlpath,'annotations':classNums,'root':root
+                    })
             else:
                 print('\n')
                 print('no annotation XML file found for:')
@@ -195,10 +182,10 @@ def get_choppable_regions(slide,args,slideID,slideExt,mask_out_loc):
     region_size = int(args.boxSize*(downsample)) #Region size before downsampling
     step = int(region_size*(1-args.overlap_rate)) #Step size before downsampling
     if slideExt =='.scn':
-        dim_x=int(slide.properties['openslide.bounds-width'])## add to columns
-        dim_y=int(slide.properties['openslide.bounds-height'])## add to rows
-        offsetx=int(slide.properties['openslide.bounds-x'])##start column
-        offsety=int(slide.properties['openslide.bounds-y'])##start row
+        dim_x=int(slide.properties['tiffslide.bounds-width'])## add to columns
+        dim_y=int(slide.properties['tiffslide.bounds-height'])## add to rows
+        offsetx=int(slide.properties['tiffslide.bounds-x'])##start column
+        offsety=int(slide.properties['tiffslide.bounds-y'])##start row
         index_y=np.array(range(offsety,offsety+dim_y,step))
         index_x=np.array(range(offsetx,offsetx+dim_x,step))
         index_y[-1]=(offsety+dim_y)-step

@@ -174,7 +174,7 @@ if __name__ == '__main__':
     ##### Args for training / prediction ####################################################
     parser.add_argument('--gpu_num', dest='gpu_num', default=2 ,type=int,
         help='number of GPUs avalable')
-    parser.add_argument('--gpu', dest='gpu', default=0 ,type=int,
+    parser.add_argument('--gpu', dest='gpu', default="" ,type=str,
         help='GPU to use for prediction')
     parser.add_argument('--iteration', dest='iteration', default='none' ,type=str,
         help='Which iteration to use for prediction')
@@ -196,10 +196,10 @@ if __name__ == '__main__':
         help='Size of batches for training high resolution CNN')
     parser.add_argument('--train_steps', dest='train_steps', default=1000 ,type=int,
         help='Size of batches for training high resolution CNN')
-    parser.add_argument('--training_data_dir', dest='base_dir', default=os.getcwd(),type=str,
+    parser.add_argument('--training_data_dir', dest='training_data_dir', default=os.getcwd(),type=str,
         help='Training Data Folder')
-    parser.add_argument('--val_data_dir', dest='base_dir', default=os.getcwd(),type=str,
-        help='Validation Data Folder')
+    parser.add_argument('--overlap_rate', dest='overlap_rate', default=0.5 ,type=float,
+        help='overlap percentage of high resolution blocks [0-1]')
 
     ### Params for cutting wsi ###
     #White level cutoff
@@ -213,6 +213,10 @@ if __name__ == '__main__':
     parser.add_argument('--boxSizeLR', dest='boxSizeLR', default=450 ,type=int,
         help='size of low resolution blocks')
     parser.add_argument('--downsampleRateLR', dest='downsampleRateLR', default=16 ,type=int,
+        help='reduce image resolution to 1/downsample rate')
+    parser.add_argument('--get_new_tissue_masks', dest='get_new_tissue_masks', default=False,type=str2bool,
+        help="Don't load usable tisse regions from disk, create new ones")
+    parser.add_argument('--downsampleRate', dest='downsampleRate', default=1 ,type=int,
         help='reduce image resolution to 1/downsample rate')
     #High resolution parameters
     parser.add_argument('--overlap_percentHR', dest='overlap_percentHR', default=0 ,type=float,
@@ -238,7 +242,8 @@ if __name__ == '__main__':
         help='Gaussian variance defining bounds on Hue shift for HSV color augmentation')
     parser.add_argument('--lbound', dest='lbound', default=0.025 ,type=float,
         help='Gaussian variance defining bounds on L* gamma shift for color augmentation [alters brightness/darkness of image]')
-
+    parser.add_argument('--balanceClasses', dest='balanceClasses', default='3,4,5,6',type=str,
+        help="which classes to balance during training")
     ### Params for training networks ###
     #Low resolution hyperparameters
     parser.add_argument('--CNNbatch_sizeLR', dest='CNNbatch_sizeLR', default=2 ,type=int,

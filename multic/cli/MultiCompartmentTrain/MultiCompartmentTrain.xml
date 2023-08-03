@@ -18,48 +18,40 @@
       <channel>input</channel>
       <index>0</index>
     </directory>
-    <directory>
-      <name>val_data_dir</name>
-      <label>Validation Data Directory</label>
-      <description>Validation Data Directory</description>
-      <channel>input</channel>
-      <index>1</index>
-    </directory>
     <file>
       <name>init_modelfile</name>
       <label>Model File</label>
       <description> Trained model file</description>
       <channel>input</channel>
-      <index>2</index>
+      <index>1</index>
     </file>
-    <string-vector>
+    <string>
       <name>gpu</name>
-      <longflag>gpu</longflag>
-      <label>gpu numbers</label>
-      <description>A comma spearated list of gpu ids.</description>
+      <label>GPU IDs</label>
+      <description>A comma separated list of the GPU IDs that will be made avalable for training</description>
       <default>0,1</default>
-      <index>3</index>
-    </string-vector>
+      <index>2</index>
+    </string>
     <integer>
-      <name>train_steps</name>
+      <name>training_steps</name>
       <label>Training steps</label>
       <description>The number of steps used for network training. The network will see [steps * batch size] image patches during training</description>
       <default>5000</default>
-      <index>4</index>
+      <index>3</index>
     </integer>
     <integer>
       <name>eval_period</name>
       <label>Validation Period</label>
       <description>Validation frequency of the model</description>
       <default>1000</default>
-      <index>5</index>
+      <index>4</index>
     </integer>
-    <file>
+    <file fileExtensions=".zip" reference="modelfiles">
       <name>output_model</name>
       <label>Output Model Name</label>
       <description>Select the name of the output model file produced. By default this will be saved in your Private folder.</description>
       <channel>output</channel>
-      <index>6</index>
+      <index>5</index>
     </file>
   </parameters>
   <parameters advanced="true">

@@ -1,12 +1,13 @@
-import os,cv2, time, random, multiprocessing,json,copy
+import os,cv2, time, random, multiprocessing,copy
 from skimage.color import rgb2hsv,hsv2rgb,rgb2lab,lab2rgb
 import numpy as np
-from xml_to_mask_minmax import xml_to_mask
+from tiffslide import TiffSlide
+from .xml_to_mask_minmax import xml_to_mask
 # from generateTrainSet import generateDatalists
 import logging
 from detectron2.utils.logger import setup_logger
 from skimage import exposure
-import json
+
 setup_logger()
 from detectron2 import model_zoo
 from detectron2.engine import DefaultTrainer
@@ -20,15 +21,12 @@ from detectron2.data import (DatasetCatalog,
     build_detection_test_loader,
     build_detection_train_loader,
 )
-from detectron2.evaluation import COCOEvaluator
 from detectron2.config import configurable
 from typing import List, Optional, Union
 import torch
 
 # sys.append("..")
-# import detectron2_custom2.detectron2
-from .engine.hooks import LossEvalHook
-from wsi_loader_utils import *
+from .wsi_loader_utils import train_samples_from_WSI, get_slide_data, get_random_chops
 from imgaug import augmenters as iaa
 
 
@@ -53,14 +51,14 @@ def IterateTraining(args):
     dirs['basedir'] = args.base_dir
     dirs['maskExt'] = '.png'
     dirs['training_data_dir'] = args.training_data_dir
-    dirs['val_data_dir'] = args.val_data_dir
+
 
 
 
 
     print('Handcoded iteration')
 
-    print(args.gpu,'gpu hehehehehe')
+
     os.environ["CUDA_VISIBLE_DEVICES"]=args.gpu
     os.environ["CUDA_LAUNCH_BLOCKING"] ='1'
 
@@ -115,7 +113,7 @@ def IterateTraining(args):
     MetadataCatalog.get("my_dataset").set(stuff_classes=sc)
     
 
-
+    _ = os.system("printf '\tTraining starts...\n'")
     cfg = get_cfg()
     cfg.merge_from_file(model_zoo.get_config_file("COCO-PanopticSegmentation/panoptic_fpn_R_50_3x.yaml"))
     cfg.DATASETS.TRAIN = ("my_dataset")
@@ -149,41 +147,17 @@ def IterateTraining(args):
     cfg.DATALOADER.FILTER_EMPTY_ANNOTATIONS=False
     cfg.INPUT.MIN_SIZE_TRAIN=args.boxSize
     cfg.INPUT.MAX_SIZE_TRAIN=args.boxSize
-
-    def real_data(args,image_coordinates_val):
-
-        all_list=[]
-        for one in train_samples_from_WSI(args,image_coordinates_val):
-            dataset_dict = one
-            c=dataset_dict['coordinates']
-            h=dataset_dict['height']
-            w=dataset_dict['width']
-            maskData=xml_to_mask(dataset_dict['xml_loc'], c, [h,w])
-            dataset_dict['annotations'] = mask2polygons(maskData)
-            all_list.append(dataset_dict)
-
-        return all_list
-
-        
-    DatasetCatalog.register("my_dataset_val", lambda:real_data(args,image_coordinates_val,cfg))
-    MetadataCatalog.get("my_dataset_val").set(thing_classes=tc)
-    MetadataCatalog.get("my_dataset_val").set(stuff_classes=sc)
-
-    cfg.DATASETS.TEST = ("my_dataset_val",)
-
-    os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
+    cfg.DATASETS.TEST = ()
+    cfg.OUTPUT_DIR = args.training_data_dir
+    #os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
     with open(cfg.OUTPUT_DIR+"/config_record.yaml", "w") as f:
         f.write(cfg.dump())   # save config to file
     trainer = Trainer(cfg)
 
     trainer.resume_or_load(resume=False)
-
     trainer.train()
 
-
-
     print('\nTraining completed, You can now run [--option predict]\033[0m\n')
-
 
 def mask2polygons(mask):
     annotation=[]
@@ -208,6 +182,7 @@ def mask2polygons(mask):
                 annotation.append(instance_dict)
     return annotation
 
+
 class Trainer(DefaultTrainer):
 
     @classmethod
@@ -218,24 +193,6 @@ class Trainer(DefaultTrainer):
     def build_train_loader(cls, cfg):
         return build_detection_train_loader(cfg, mapper=CustomDatasetMapper(cfg, True))
 
-    @classmethod
-    def build_evaluator(cls, cfg, dataset_name, output_folder=None):
-        if output_folder is None:
-            output_folder = os.path.join(cfg.OUTPUT_DIR, "inference")
-        return COCOEvaluator(dataset_name, cfg, True, output_folder)
-                     
-    def build_hooks(self):
-        hooks = super().build_hooks()
-        hooks.insert(-1,LossEvalHook(
-            self.cfg.TEST.EVAL_PERIOD,
-            self.model,
-            build_detection_test_loader(
-                self.cfg,
-                self.cfg.DATASETS.TEST[0],
-                CustomDatasetMapper(self.cfg, True)
-            )
-        ))
-        return hooks
 
 class CustomDatasetMapper:
 
@@ -353,7 +310,7 @@ class CustomDatasetMapper:
         h=dataset_dict['height']
         w=dataset_dict['width']
 
-        slide=openslide.OpenSlide(dataset_dict['slide_loc'])
+        slide= TiffSlide(dataset_dict['slide_loc'])
         image=np.array(slide.read_region((c[0],c[1]),0,(h,w)))[:,:,:3]
         slide.close()
         maskData=xml_to_mask(dataset_dict['xml_loc'], c, [h,w])

@@ -118,6 +118,7 @@ RUN apt-get update && \
 COPY . $mc_path/
 WORKDIR $mc_path
 
+RUN pip cache purge
 RUN pip install --no-cache-dir --upgrade --ignore-installed pip setuptools && \
     pip install --no-cache-dir .  && \
     pip install --no-cache-dir tensorboard cmake onnx && \
@@ -134,6 +135,7 @@ WORKDIR $mc_path/multic/cli
 RUN python -m slicer_cli_web.cli_list_entrypoint --list_cli
 RUN python -m slicer_cli_web.cli_list_entrypoint MultiCompartmentSegment --help
 RUN python -m slicer_cli_web.cli_list_entrypoint FeatureExtraction --help
+RUN python -m slicer_cli_web.cli_list_entrypoint FeatureExtraction-HG --help
 
 
 ENTRYPOINT ["/bin/bash", "docker-entrypoint.sh"]

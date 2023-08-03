@@ -4,5 +4,8 @@
   },
   "FeatureExtraction": {
     "type"    : "python"
+  },
+  "FeatureExtraction-HG": {
+    "type"    : "python"
   }
 }

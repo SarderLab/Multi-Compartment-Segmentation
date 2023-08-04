@@ -1,4 +1,4 @@
-import os,zipfile
+import os
 import sys
 from glob import glob
 import girder_client
@@ -91,44 +91,44 @@ def main(args):
 
                     # print(a['_version'], a['updated'], a['created'])
                     break
+                
         if skipSlide != len(NAMES):
             _ = os.system("printf '\tThis slide is missing annotation layers\n'")
             _ = os.system("printf '\tSKIPPING SLIDE...\n'")
             del xmlAnnot
             continue # correct layers not present
-
-        xmlAnnot = xml_add_annotation(Annotations=xmlAnnot, xml_color=xml_color, annotationID=ignore_label)
-        # test all annotation layers in order created
-        for iter,a in enumerate(annot):
-            try:
-                # check for annotation layer by name
-                a_name = a['annotation']['name'].replace(' ','')
-            except:
-                a_name = None
-            if a_name == compart:
-                pointsList = []
-                # load json data
-                _ = os.system("printf '\tloading annotation layer: [{}]\n'".format(compart))
-                a_data = a['annotation']['elements']
-                for data in a_data:
-                    pointList = []
-                    if data['type'] == 'polyline':
-                        points = data['points']
-                    elif data['type'] == 'rectangle':
-                        center = data['center']
-                        width = data['width']/2
-                        height = data['height']/2
-                        points = [[ center[0]-width, center[1]-width ],[ center[0]+width, center[1]+width ]]
-                    for point in points:
-                        pt_dict = {'X': round(point[0]), 'Y': round(point[1])}
-                        pointList.append(pt_dict)
-                    pointsList.append(pointList)
-                # write annotations to xml
+        # compart = 'ignore_label'
+        # # test all annotation layers in order created
+        # for iter,a in enumerate(annot):
+        #     try:
+        #         # check for annotation layer by name
+        #         a_name = a['annotation']['name'].replace(' ','')
+        #     except:
+        #         a_name = None
+        #     if a_name == compart:
+        #         pointsList = []
+        #         # load json data
+        #         _ = os.system("printf '\tloading annotation layer: [{}]\n'".format(compart))
+        #         a_data = a['annotation']['elements']
+        #         for data in a_data:
+        #             pointList = []
+        #             if data['type'] == 'polyline':
+        #                 points = data['points']
+        #             elif data['type'] == 'rectangle':
+        #                 center = data['center']
+        #                 width = data['width']/2
+        #                 height = data['height']/2
+        #                 points = [[ center[0]-width, center[1]-width ],[ center[0]+width, center[1]+width ]]
+        #             for point in points:
+        #                 pt_dict = {'X': round(point[0]), 'Y': round(point[1])}
+        #                 pointList.append(pt_dict)
+        #             pointsList.append(pointList)
+        #         # write annotations to xml
        
-                for i in range(len(pointsList)):
-                    pointList = pointsList[i]
-                    xmlAnnot = xml_add_region(Annotations=xmlAnnot, pointList=pointList, annotationID=ignore_label)
-                break
+        #         for i in range(len(pointsList)):
+        #             pointList = pointsList[i]
+        #             xmlAnnot = xml_add_region(Annotations=xmlAnnot, pointList=pointList, annotationID=ignore_label)
+        #         break
 
         # include slide and fetch annotations
         _ = os.system("printf '\tFETCHING SLIDE...\n'")
@@ -141,15 +141,18 @@ def main(args):
         write_minmax_to_xml(xml_path) # to avoid trying to write to the xml from multiple workers
         del xmlAnnot
     os.system("ls -lh '{}'".format(tmp))
+
+    trainlogdir=os.path.join(tmp, 'output')
+    if not os.path.exists(trainlogdir):
+        os.makedirs(trainlogdir)
+    
     _ = os.system("printf '\ndone retriving data...\nstarting training...\n\n'")
 
-    print(args.gpu, 'this is gpu')
-    cmd = "python3 ../segmentationschool/segmentation_school.py --option {} --training_data_dir {} --init_modelfile {} --gpu {} --train_steps {} --eval_period {} --girderApiUrl {} --girderToken {}".format('train', tmp.replace(' ', '\ '), args.init_modelfile, args.gpu, args.training_steps, args.eval_period,args.girderApiUrl, args.girderToken)
+
+    cmd = "python3 ../segmentationschool/segmentation_school.py --option {} --training_data_dir {} --init_modelfile {} --gpu {} --train_steps {} --num_workers {} --girderApiUrl {} --girderToken {}".format('train', tmp.replace(' ', '\ '), args.init_modelfile, args.gpu, args.training_steps, args.num_workers, args.girderApiUrl, args.girderToken)
     print(cmd)
     sys.stdout.flush()
     os.system(cmd)
-
-    trainlogdir = '{}/output/'.format(tmp)
 
     os.listdir(trainlogdir)
     os.chdir(trainlogdir)
@@ -159,13 +162,10 @@ def main(args):
     filelist = glob('*.pth')
     latest_model = max(filelist, key=os.path.getmtime)
 
-    print(latest_model)
+    _ = os.system("printf '\n{}\n'".format(latest_model))
+    os.rename(latest_model, args.output_model)
 
-    z = zipfile.ZipFile(args.output_model, 'w')
-    
-    z.write(latest_model, compress_type=zipfile.ZIP_DEFLATED)
-    
-    z.close()
+    _ = os.system("printf '\nDone!\n\n'")
 
 
 

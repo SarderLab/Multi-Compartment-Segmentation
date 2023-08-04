@@ -297,6 +297,8 @@ if __name__ == '__main__':
         help='padded region for low resolution region extraction')
     parser.add_argument('--show_interstitium', dest='show_interstitium', default=True ,type=str2bool,
         help='padded region for low resolution region extraction')
+    parser.add_argument('--num_workers', dest='num_workers', default=1 ,type=int,
+        help='Number of workers for data loader')
 
 
 

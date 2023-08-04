@@ -15,7 +15,7 @@ from detectron2.config import get_cfg
 # from detectron2.data import MetadataCatalog, DatasetCatalog
 from detectron2.data import detection_utils as utils
 import detectron2.data.transforms as T
-
+from detectron2.structures import BoxMode
 from detectron2.data import (DatasetCatalog,
     MetadataCatalog,
     build_detection_test_loader,
@@ -98,30 +98,20 @@ def IterateTraining(args):
     slide_idxs=random.choices(usable_idx,k=num_images)
     image_coordinates=get_random_chops(slide_idxs,usable_slides,region_size)
   
-    
-    
-    usable_slides_val=get_slide_data(args, wsi_directory=dirs['val_data_dir'])
-    
-    usable_idx_val=range(0,len(usable_slides_val))
-    slide_idxs_val=random.choices(usable_idx_val,k=int(args.batch_size*args.train_steps/100))
-    image_coordinates_val=get_random_chops(slide_idxs_val,usable_slides_val,region_size)
-
-    
-    
     DatasetCatalog.register("my_dataset", lambda:train_samples_from_WSI(args,image_coordinates))
     MetadataCatalog.get("my_dataset").set(thing_classes=tc)
     MetadataCatalog.get("my_dataset").set(stuff_classes=sc)
     
 
-    _ = os.system("printf '\tTraining starts...\n'")
+    _ = os.system("printf '\nTraining starts...\n'")
     cfg = get_cfg()
     cfg.merge_from_file(model_zoo.get_config_file("COCO-PanopticSegmentation/panoptic_fpn_R_50_3x.yaml"))
     cfg.DATASETS.TRAIN = ("my_dataset")
 
-    cfg.TEST.EVAL_PERIOD=args.eval_period
-    cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.50
-    num_cores = multiprocessing.cpu_count()
-    cfg.DATALOADER.NUM_WORKERS = 10
+    #cfg.TEST.EVAL_PERIOD=args.eval_period
+    #cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.50
+    #num_cores = multiprocessing.cpu_count()
+    cfg.DATALOADER.NUM_WORKERS = args.num_workers
 
     if args.init_modelfile:
         cfg.MODEL.WEIGHTS = args.init_modelfile
@@ -148,7 +138,7 @@ def IterateTraining(args):
     cfg.INPUT.MIN_SIZE_TRAIN=args.boxSize
     cfg.INPUT.MAX_SIZE_TRAIN=args.boxSize
     cfg.DATASETS.TEST = ()
-    cfg.OUTPUT_DIR = args.training_data_dir
+    cfg.OUTPUT_DIR = args.training_data_dir+"/output"
     #os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
     with open(cfg.OUTPUT_DIR+"/config_record.yaml", "w") as f:
         f.write(cfg.dump())   # save config to file
@@ -157,7 +147,7 @@ def IterateTraining(args):
     trainer.resume_or_load(resume=False)
     trainer.train()
 
-    print('\nTraining completed, You can now run [--option predict]\033[0m\n')
+    _ = os.system("printf '\nTraining completed!\n'")
 
 def mask2polygons(mask):
     annotation=[]

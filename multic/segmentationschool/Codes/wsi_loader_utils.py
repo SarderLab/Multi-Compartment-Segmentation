@@ -50,7 +50,7 @@ def train_samples_from_WSI(args,image_coordinates):
 
 
     num_cores=multiprocessing.cpu_count()
-    print('Generating detectron2 dictionary format...',num_cores)
+    print('Generating detectron2 dictionary format...')
     data_list=Parallel(n_jobs=num_cores,backend='threading')(delayed(get_image_meta)(i=i,
         args=args) for i in tqdm(image_coordinates))
     return data_list

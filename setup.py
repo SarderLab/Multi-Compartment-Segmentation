@@ -45,12 +45,12 @@ setup(
     install_requires=[
         # scientific packages
         'nimfa>=1.3.2',
-        'numpy>=1.21.1',
+        'numpy==1.23.5',
         'scipy>=0.19.0',
         'Pillow==9.5.0',
         'pandas>=0.19.2',
         'imageio>=2.3.0',
-        # 'shapely[vectorized]',
+        'shapely',
         #'opencv-python-headless<4.7',
         #'sqlalchemy',
         # 'matplotlib',
@@ -69,6 +69,7 @@ setup(
         # 'umap-learn==0.5.3',
         'openpyxl',
         'xlrd<2',
+        'imgaug',
         # dask packages
         'dask[dataframe]>=1.1.0',
         'distributed>=1.21.6',

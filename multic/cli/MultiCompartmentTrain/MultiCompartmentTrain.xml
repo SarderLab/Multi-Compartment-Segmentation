@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <executable>
   <category>HistomicsTK</category>
-  <title>Multi Compartment Segmentation</title>
-  <description>Segments multi-level structures from a whole-slide image</description>
+  <title>Multi Compartment Training</title>
+  <description>Trains Multi compartment segmentation model</description>
   <version>0.1.0</version>
   <documentation-url>https://github.com/SarderLab/Multi-Compartment-Segmentation</documentation-url>
   <license>Apache 2.0</license>
@@ -11,26 +11,47 @@
   <parameters>
     <label>IO</label>
     <description>Input/output parameters</description>
-    <image>
-      <name>input_file</name>
-      <label>input_file</label>
-      <description>input file</description>
-      <channel>input</channel>
-      <index>0</index>
-    </image>
     <directory>
-      <name>base_dir</name>
-      <label>Base Directory</label>
+      <name>training_data_dir</name>
+      <label>Training Data Directory</label>
       <description>Base Directory for the model</description>
       <channel>input</channel>
-      <index>1</index>
+      <index>0</index>
     </directory>
     <file>
-      <name>modelfile</name>
+      <name>init_modelfile</name>
       <label>Model File</label>
       <description> Trained model file</description>
       <channel>input</channel>
+      <index>1</index>
+    </file>
+    <string>
+      <name>gpu</name>
+      <label>GPU IDs</label>
+      <description>A comma separated list of the GPU IDs that will be made avalable for training</description>
+      <default>0,1</default>
       <index>2</index>
+    </string>
+    <integer>
+      <name>training_steps</name>
+      <label>Training steps</label>
+      <description>The number of steps used for network training. The network will see [steps * batch size] image patches during training</description>
+      <default>5000</default>
+      <index>3</index>
+    </integer>
+    <integer>
+      <name>num_workers</name>
+      <label>Number of workers</label>
+      <description>Number of workers for Dataloader</description>
+      <default>0</default>
+      <index>4</index>
+    </integer>
+    <file fileExtensions=".pth">
+      <name>output_model</name>
+      <label>Output Model Name</label>
+      <description>Select the name of the output model file produced. By default this will be saved in your Private folder.</description>
+      <channel>output</channel>
+      <index>5</index>
     </file>
   </parameters>
   <parameters advanced="true">

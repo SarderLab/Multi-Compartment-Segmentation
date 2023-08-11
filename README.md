@@ -30,7 +30,7 @@ This DSA plugin allows users to run image analysis jobs through the HistomicsUI 
 
 ### Feature extraction
 
-1. Once the image is annotated, features can be extracted for glomerulus, sclerotic glomerulus, tubule, and artery/arteriole layers by running the `FeatureExtraction` plugin.
+1. Once the image is annotated, morphometric features can be extracted for glomerulus, sclerotic glomerulus, tubule, and artery/arteriole layers by running the `FeatureExtraction` plugin.
 
 <img src="figures/fig6.png"  width="60%" height="30%">
 

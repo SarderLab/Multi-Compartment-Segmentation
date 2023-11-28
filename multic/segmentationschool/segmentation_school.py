@@ -174,7 +174,7 @@ if __name__ == '__main__':
     ##### Args for training / prediction ####################################################
     parser.add_argument('--gpu_num', dest='gpu_num', default=2 ,type=int,
         help='number of GPUs avalable')
-    parser.add_argument('--gpu', dest='gpu', default=0 ,type=int,
+    parser.add_argument('--gpu', dest='gpu', default="" ,type=str,
         help='GPU to use for prediction')
     parser.add_argument('--iteration', dest='iteration', default='none' ,type=str,
         help='Which iteration to use for prediction')
@@ -188,6 +188,18 @@ if __name__ == '__main__':
         help='number of classes present in the High res training data [USE ONLY IF DIFFERENT FROM LOW RES]')
     parser.add_argument('--modelfile', dest='modelfile', default=None ,type=str,
         help='the desired model file to use for training or prediction')
+    parser.add_argument('--init_modelfile', dest='init_modelfile', default=None ,type=str,
+        help='the desired model file to use for training or prediction')
+    parser.add_argument('--eval_period', dest='eval_period', default=1000 ,type=int,
+        help='Validation Period')
+    parser.add_argument('--batch_size', dest='batch_size', default=4 ,type=int,
+        help='Size of batches for training high resolution CNN')
+    parser.add_argument('--train_steps', dest='train_steps', default=1000 ,type=int,
+        help='Size of batches for training high resolution CNN')
+    parser.add_argument('--training_data_dir', dest='training_data_dir', default=os.getcwd(),type=str,
+        help='Training Data Folder')
+    parser.add_argument('--overlap_rate', dest='overlap_rate', default=0.5 ,type=float,
+        help='overlap percentage of high resolution blocks [0-1]')
 
     ### Params for cutting wsi ###
     #White level cutoff
@@ -202,10 +214,14 @@ if __name__ == '__main__':
         help='size of low resolution blocks')
     parser.add_argument('--downsampleRateLR', dest='downsampleRateLR', default=16 ,type=int,
         help='reduce image resolution to 1/downsample rate')
+    parser.add_argument('--get_new_tissue_masks', dest='get_new_tissue_masks', default=False,type=str2bool,
+        help="Don't load usable tisse regions from disk, create new ones")
+    parser.add_argument('--downsampleRate', dest='downsampleRate', default=1 ,type=int,
+        help='reduce image resolution to 1/downsample rate')
     #High resolution parameters
     parser.add_argument('--overlap_percentHR', dest='overlap_percentHR', default=0 ,type=float,
         help='overlap percentage of high resolution blocks [0-1]')
-    parser.add_argument('--boxSize', dest='boxSize', default=2048 ,type=int,
+    parser.add_argument('--boxSize', dest='boxSize', default=1200 ,type=int,
         help='size of high resolution blocks')
     parser.add_argument('--downsampleRateHR', dest='downsampleRateHR', default=1 ,type=int,
         help='reduce image resolution to 1/downsample rate')
@@ -226,7 +242,8 @@ if __name__ == '__main__':
         help='Gaussian variance defining bounds on Hue shift for HSV color augmentation')
     parser.add_argument('--lbound', dest='lbound', default=0.025 ,type=float,
         help='Gaussian variance defining bounds on L* gamma shift for color augmentation [alters brightness/darkness of image]')
-
+    parser.add_argument('--balanceClasses', dest='balanceClasses', default='3,4,5,6',type=str,
+        help="which classes to balance during training")
     ### Params for training networks ###
     #Low resolution hyperparameters
     parser.add_argument('--CNNbatch_sizeLR', dest='CNNbatch_sizeLR', default=2 ,type=int,
@@ -280,6 +297,8 @@ if __name__ == '__main__':
         help='padded region for low resolution region extraction')
     parser.add_argument('--show_interstitium', dest='show_interstitium', default=True ,type=str2bool,
         help='padded region for low resolution region extraction')
+    parser.add_argument('--num_workers', dest='num_workers', default=1 ,type=int,
+        help='Number of workers for data loader')
 
 
 

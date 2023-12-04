@@ -17,6 +17,7 @@ from scipy.ndimage.morphology import binary_fill_holes
 from tiffslide import TiffSlide
 from skimage.color import rgb2hsv
 from skimage.filters import gaussian
+import time
 
 
 NAMES = ['cortical_interstitium','medullary_interstitium','non_globally_sclerotic_glomeruli','globally_sclerotic_glomeruli','tubules','arteries/arterioles']
@@ -71,11 +72,16 @@ def predict(args):
     print('Handcoded iteration')
     iteration=1
     print(iteration)
-    dirs['xml_save_dir'] = args.base_dir
+    dirs['xml_save_dir'] = args.base_dir + dirs['training_data_dir'] + str(iteration) + '/Predicted_XMLs/'
+    # dirs['xml_save_dir'] = args.base_dir
     if iteration == 'none':
         print('ERROR: no trained models found \n\tplease use [--option train]')
 
     else:
+        
+        # check main directory exists
+        make_folder(dirs['outDir'])
+        make_folder(dirs['xml_save_dir'])
 
         print('Building network configuration ...\n')
 
@@ -108,7 +114,17 @@ def predict(args):
         cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = args.roi_thresh
         predictor = DefaultPredictor(cfg)
         broken_slides=[]
-        for wsi in [args.files]:
+        #################### Fatemeh added #######################
+        # get all WSIs
+        WSIs = []
+        usable_ext=args.wsi_ext.split(',')
+        for ext in usable_ext:
+            WSIs.extend(glob.glob(args.training_data_dir + '/*' + ext))
+        print('len(WSIs) =', len(WSIs))
+        for wsi in WSIs:
+            start_time = time.time()
+        #################### Fatemeh added #######################                
+        # for wsi in [args.files]:
             extsplit = os.path.splitext(wsi)
             basename = extsplit[0]
             extname = extsplit[-1]
@@ -214,6 +230,8 @@ def predict(args):
                 print('here writing 2')
                 xml_suey(wsiMask=wsiMask, dirs=dirs, args=args, classNum=classNum, downsample=downsample,glob_offset=[0,0])
 
+            print(f"Excecution time for one WSI: {(time.time() - start_time)} seconds")
+            
         print('\nand run [--option train]\033[0m\n')
         print('The following slides were not openable by openslide:')
         print(broken_slides)
@@ -303,29 +321,31 @@ def xml_suey(wsiMask, dirs, args, classNum, downsample,glob_offset):
             pointList = pointsList[i]
             Annotations = xml_add_region(Annotations=Annotations, pointList=pointList, annotationID=value)
 
+    #################### Fatemeh added #######################
     # save xml
-    folder = args.base_dir
-    girder_folder_id = folder.split('/')[-2]
-    _ = os.system("printf 'Using data from girder_client Folder: {}\n'".format(folder))
-    file_name = dirs['file_name']
-    print(file_name)
-    gc = girder_client.GirderClient(apiUrl=args.girderApiUrl)
-    gc.setToken(args.girderToken)
-    files = list(gc.listItem(girder_folder_id))
-    # dict to link filename to gc id
-    item_dict = dict()
-    for file in files:
-        d = {file['name']:file['_id']}
-        item_dict.update(d)
-    print(item_dict)
-    print(item_dict[file_name])
-    annots = convert_xml_json(Annotations, NAMES)
-    for annot in annots:
-        _ = gc.post(path='annotation',parameters={'itemId':item_dict[file_name]}, data = json.dumps(annot))
-        print('uploating layers')
-    print('annotation uploaded...\n')
+    print(dirs['xml_save_dir']+'/'+dirs['fileID']+'.xml')
+    xml_save(Annotations=Annotations, filename=dirs['xml_save_dir']+'/'+dirs['fileID']+'.xml')
 
-
+    # folder = args.base_dir
+    # # girder_folder_id = folder.split('/')[-2]
+    # # _ = os.system("printf 'Using data from girder_client Folder: {}\n'".format(folder))
+    # file_name = dirs['file_name']
+    # print(file_name)
+    # gc = girder_client.GirderClient(apiUrl=args.girderApiUrl)
+    # gc.setToken(args.girderToken)
+    # files = list(gc.listItem(girder_folder_id))
+    # # dict to link filename to gc id
+    # item_dict = dict()
+    # for file in files:
+    #     d = {file['name']:file['_id']}
+    #     item_dict.update(d)
+    # print(item_dict)
+    # print(item_dict[file_name])
+    # annots = convert_xml_json(Annotations, NAMES)
+    # for annot in annots:
+    #     _ = gc.post(path='annotation',parameters={'itemId':item_dict[file_name]}, data = json.dumps(annot))
+    #     print('uploating layers')
+    # print('annotation uploaded...\n')
 
 def get_contour_points(mask, args, downsample,value, offset={'X': 0,'Y': 0}):
     # returns a dict pointList with point 'X' and 'Y' values
@@ -375,3 +395,11 @@ def xml_add_region(Annotations, pointList, annotationID=-1, regionID=None): # ad
     # add connecting point
     ET.SubElement(Vertices, 'Vertex', attrib={'X': str(pointList[0]['X']), 'Y': str(pointList[0]['Y']), 'Z': '0'})
     return Annotations
+
+def xml_save(Annotations, filename):
+    xml_data = ET.tostring(Annotations, pretty_print=True)
+    #xml_data = Annotations.toprettyxml()
+    f = open(filename, 'wb')
+    f.write(xml_data)
+    f.close()
+

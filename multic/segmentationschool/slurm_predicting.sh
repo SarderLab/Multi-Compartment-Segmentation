@@ -25,12 +25,12 @@ USER=f.afsari
 # Add the name of the folder containing WSIs here
 PROJECT=multic_segment
 
-CODESDIR=/blue/pinaki.sarder/f.afsari/Codes/Multi-Compartment-Segmentation/multic/segmentationschool
+CODESDIR=/blue/pinaki.sarder/f.afsari/Codes/MultiC_test/multic/segmentationschool
 SIFDIR=/orange/pinaki.sarder/shared_singularity_files
 
-DATADIR=$CODESDIR/TESTING_data
+DATADIR=$CODESDIR/test_data
 MODELDIR=$CODESDIR/pretrained_model
 
 CONTAINER=$SIFDIR/multic_segment.sif
 CUDA_LAUNCH_BLOCKING=1
-singularity exec --nv -B $(pwd):/exec/,$DATADIR/:/data,$MODELDIR/:/model/ $CONTAINER python3 /exec/segmentation_school.py --option predict --base_dir $CODESDIR --init_modelfile $MODELDIR/model_final.pth --training_data_dir $DATADIR --wsi_ext svs --num_workers 10
+singularity exec --nv -B $(pwd):/exec/,$DATADIR/:/data/,$MODELDIR/:/model/ $CONTAINER python3 /exec/segmentation_school.py --option predict --base_dir $CODESDIR --modelfile /model/model_final.pth --files /data --wsi_ext svs 

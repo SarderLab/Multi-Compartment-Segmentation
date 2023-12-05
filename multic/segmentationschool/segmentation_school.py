@@ -51,6 +51,7 @@ def main(args):
     # from TransformXMLs import splice_cortex_XMLs,register_aperio_scn_xmls
     # from randomCropGenerator import randomCropGenerator
     if args.one_network == True:
+        print('------------------------------True-------------------------------------')
         from segmentationschool.Codes.IterativeTraining_1X import IterateTraining
         from segmentationschool.Codes.IterativePredict_1X import predict
     else:

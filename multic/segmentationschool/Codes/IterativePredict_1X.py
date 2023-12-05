@@ -72,7 +72,7 @@ def predict(args):
     print('Handcoded iteration')
     iteration=1
     print(iteration)
-    dirs['xml_save_dir'] = args.base_dir + dirs['training_data_dir'] + str(iteration) + '/Predicted_XMLs/'
+    dirs['xml_save_dir'] = args.files + '/' + str(iteration) + '/Predicted_XMLs/'
     # dirs['xml_save_dir'] = args.base_dir
     if iteration == 'none':
         print('ERROR: no trained models found \n\tplease use [--option train]')
@@ -119,7 +119,7 @@ def predict(args):
         WSIs = []
         usable_ext=args.wsi_ext.split(',')
         for ext in usable_ext:
-            WSIs.extend(glob.glob(args.training_data_dir + '/*' + ext))
+            WSIs.extend(glob.glob(args.files + '/*' + ext))
         print('len(WSIs) =', len(WSIs))
         for wsi in WSIs:
             start_time = time.time()

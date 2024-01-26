@@ -1,6 +1,8 @@
 import os
 import sys
 from ctk_cli import CLIArgumentParser
+sys.path.append('..')
+from segmentationschool.segmentation_school import run_it
 
 def main(args):
 
@@ -14,10 +16,12 @@ def main(args):
     print(cwd)
     os.chdir(cwd)
 
-    cmd = "python3 ../segmentationschool/segmentation_school.py --option {} --base_dir {} --modelfile {} --girderApiUrl {} --girderToken {} --files {}".format('predict', args.base_dir, args.modelfile, args.girderApiUrl, args.girderToken, args.input_file)
-    print(cmd)
-    sys.stdout.flush()
-    os.system(cmd)
+    #cmd = "python3 ../segmentationschool/segmentation_school.py --option {} --base_dir {} --modelfile {} --girderApiUrl {} --girderToken {} --files {}".format('predict', args.base_dir, args.modelfile, args.girderApiUrl, args.girderToken, args.input_file)
+    #print(cmd)
+    #sys.stdout.flush()
+    #os.system(cmd)
+
+    run_it(args)
 
 if __name__ == "__main__":
     main(CLIArgumentParser().parse_args())

@@ -112,6 +112,11 @@ def savetime(args, starttime):
         #     timefile.write('\n' + args.option +'\t'+ str(time.time()-starttime))
 
 
+# importable function
+def run_it(args):
+
+    main(args)
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 

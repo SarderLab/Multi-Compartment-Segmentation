@@ -126,8 +126,8 @@ if __name__ == '__main__':
         help='girderApiUrl')
     parser.add_argument('--girderToken', dest='girderToken', default=' ' ,type=str,
         help='girderToken')
-    parser.add_argument('--files', dest='files', default=' ' ,type=str,
-        help='files')
+    parser.add_argument('--input_file', dest='input_file', default=' ' ,type=str,
+        help='input_file')
     # option
     parser.add_argument('--option', dest='option', default=' ' ,type=str,
         help='option for [new, train, predict, validate]')

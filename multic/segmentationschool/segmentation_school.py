@@ -272,7 +272,7 @@ if __name__ == '__main__':
         help='file ext of wsi images')
     parser.add_argument('--bg_intensity', dest='bg_intensity', default=.5 ,type=float,
         help='if displaying output classifications [save_outputs = True] background color [0-1]')
-    parser.add_argument('--approximation_downsample', dest='approx_downsample', default=1 ,type=float,
+    parser.add_argument('--approx_downsample', dest='approx_downsample', default=1 ,type=float,
         help='Amount to downsample high resolution prediction boundaries for smoothing')
 
 

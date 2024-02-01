@@ -24,7 +24,7 @@ def main(args):
         'girderApiUrl':' ',
         'girderToken':' ',
         'input_file':' ',
-        'option':' ',
+        'option':'predict',
         'transfer':' ',
         'one_network':' ',
         'target':None,
@@ -89,8 +89,12 @@ def main(args):
         'show_interstitium':True
     }
     for d in default_vals:
-        if d not in vars(args):
+        if d not in list(vars(args).keys()):
             setattr(args,d,default_vals[d])
+
+    print(vars(args))
+    for d in vars(args):
+        print(f'argument: {d}, value: {getattr(args,d)}')
 
     run_it(args)
 

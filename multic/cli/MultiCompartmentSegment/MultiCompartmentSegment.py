@@ -26,7 +26,7 @@ def main(args):
         'input_file':' ',
         'option':'predict',
         'transfer':' ',
-        'one_network':' ',
+        'one_network':True,
         'target':None,
         'cortextarget':None,
         'output':None,

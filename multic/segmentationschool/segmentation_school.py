@@ -287,7 +287,5 @@ if __name__ == '__main__':
         help='padded region for low resolution region extraction')
 
 
-
-
-    args = parser.parse_args()
-    main(args=args)
+    #args = parser.parse_args()
+    #main(args=args)

@@ -29,15 +29,15 @@ def xml_to_mask(annotations, location, size, downsample_factor=1, verbose=0):
     # calculate region bounds
     bounds = {'x_min' : location[0], 'y_min' : location[1], 'x_max' : location[0] + size[0], 'y_max' : location[1] + size[1]}
 
-    sorted_Annotations = sorted(annotations, key=lambda x: NAMES_DICT[(x['annotation']['name']).strip()])
+    # sorted_Annotations = sorted(annotations, key=lambda x: NAMES_DICT[(x['annotation']['name']).strip()])
 
-    IDs = regions_in_mask(Annotations=sorted_Annotations, bounds=bounds, verbose=verbose)
+    IDs = regions_in_mask(Annotations=annotations, bounds=bounds, verbose=verbose)
 
     if verbose != 0:
         print('\nFOUND: ' + str(len(IDs)) + ' regions')
 
     # find regions in bounds
-    Regions = get_vertex_points(Annotations=sorted_Annotations,IDs=IDs, verbose=verbose)
+    Regions = get_vertex_points(Annotations=annotations,IDs=IDs, verbose=verbose)
 
     # fill regions and create mask
     mask = Regions_to_mask(Regions=Regions, bounds=bounds, IDs=IDs, downsample_factor=downsample_factor, verbose=verbose)

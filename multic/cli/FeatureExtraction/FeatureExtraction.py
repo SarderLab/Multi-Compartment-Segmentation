@@ -1,9 +1,11 @@
 import sys
-import os, girder_client
+import os
 import numpy as np
 import pandas as pd
 from tiffslide import TiffSlide
-from ctk_cli import CLIArgumentParser
+from argparse import ArgumentParser
+import xml.etree.ElementTree as ET
+# from ctk_cli import CLIArgumentParser
 
 sys.path.append("..")
 
@@ -27,65 +29,69 @@ MODx[2]= 0.0
 MODy[2]= 0.0
 MODz[2]= 0.0
 MOD=[MODx,MODy,MODz]
-NAMES = ['non_globally_sclerotic_glomeruli','globally_sclerotic_glomeruli','tubules','arteries/arterioles']
+# NAMES = ['non_globally_sclerotic_glomeruli','globally_sclerotic_glomeruli','tubules','arteries/arterioles']
+NAMES = [3, 4, 5, 6]
 
-
-def main(args):
-
-    file = args.input_file
-    _ = os.system("printf 'Using data from girder_client file: {}\n'".format(file))
-    file_name = file.split('/')[-1]
-    plain_name = file_name.split('.')[0]
-    folder = args.base_dir
-    base_dir_id = folder.split('/')[-2]
-    _ = os.system("printf '\nUsing data from girder_client Folder: {}\n'".format(folder))
-
+def main():
     
-    gc = girder_client.GirderClient(apiUrl=args.girderApiUrl)
-    gc.setToken(args.girderToken)
-
-    files = list(gc.listItem(base_dir_id))
-    # dict to link filename to gc id
-    item_dict = dict()
-    for file in files:
-        d = {file['name']:file['_id']}
-        item_dict.update(d)
+    parser = ArgumentParser(description="Input file")
     
-    file_id = item_dict[file_name]
-
-    annotations = gc.get('/annotation/item/{}'.format(file_id))
-
-    annotations_filtered = [annot for annot in annotations if annot['annotation']['name'].strip() in NAMES]
-
-    del annotations
-
-    cwd = os.getcwd()
-    print(cwd)
-
-    slide = TiffSlide(args.input_file)
-    x,y = slide.dimensions
-
-    mpp = slide.properties['tiffslide.mpp-x']
-    mask_xml = xml_to_mask(annotations_filtered,(0,0),(x,y),downsample_factor=args.downsample_factor)
-
-    gloms = process_glom_features(mask_xml, NAMES_DICT['non_globally_sclerotic_glomeruli'], MOD, slide,mpp, h_threshold=args.h_threshold, saturation_threshold=args.saturation_threshold)
-    s_gloms = process_glom_features(mask_xml, NAMES_DICT['globally_sclerotic_glomeruli'], MOD, slide,mpp, h_threshold=args.h_threshold, saturation_threshold=args.saturation_threshold)
-    tubs = process_tubules_features(mask_xml, NAMES_DICT['tubules'], MOD, slide,mpp,whitespace_threshold=args.whitespace_threshold)
-    arts = process_arteriol_features(mask_xml, NAMES_DICT['arteries/arterioles'], mpp)
-
-
-    all_comparts = [gloms,s_gloms,tubs, arts]
-    all_columns = [['x1','x2','y1','y2','Area','Mesangial Area','Mesangial Fraction'],
-                   ['x1','x2','y1','y2','Area','Mesangial Area','Mesangial Fraction'],
-                   ['x1','x2','y1','y2','Average TBM Thickness','Average Cell Thickness','Luminal Fraction'],
-                   ['x1','x2','y1','y2','Arterial Area']]
-    compart_names = ['gloms','s_gloms','tubs','arts']
+    parser.add_argument("--input_dir", type=str, help="base dir")
+    parser.add_argument("--output_dir", type=str, help="output dir")
+    parser.add_argument("--downsample_factor", type=float, default=1.0, help="downsample factor")    
+    parser.add_argument("--h_threshold", type=float, default=160, help="h threshold")
+    parser.add_argument("--whitespace_threshold", type=float, default=0.88, help="whitespace threshold")
+    parser.add_argument("--saturation_threshold", type=float, default=0.3, help="saturation threshold")
     
-    _ = os.system("printf '\tWriting Excel file: [{}]\n'".format(args.output_filename))
-    with pd.ExcelWriter(args.output_filename) as writer:
-        for idx,compart in enumerate(all_comparts):
-            df = pd.DataFrame(compart,columns=all_columns[idx])
-            df.to_excel(writer, index=False, sheet_name=compart_names[idx])
+    args = parser.parse_args()
+
+    image_files = os.listdir(args.input_dir)
+    
+    for filename in image_files:
+        if filename.endswith('.svs') == False:
+            continue        
+        image_file = os.path.join(args.input_dir, filename.split('.')[0] + '.svs')        
+        xml_file   = os.path.join(args.input_dir, filename.split('.')[0] + '.xml')
+        
+        # print(image_file)
+        # print(xml_file)
+        
+        xmlRoot = ET.parse(xml_file).getroot()
+        
+        annotations = xmlRoot.findall('.//Annotation')                
+
+        annotations_filtered = [annot for annot in annotations if annot.get('Id') in map(str, NAMES)]
+
+        del annotations
+
+        cwd = os.getcwd()
+        print(cwd)
+
+        slide = TiffSlide(image_file)
+        x,y = slide.dimensions
+
+        mpp = slide.properties['tiffslide.mpp-x']
+        mask_xml = xml_to_mask(annotations_filtered,(0,0),(x,y),downsample_factor=args.downsample_factor)
+
+        gloms = process_glom_features(mask_xml, NAMES_DICT['non_globally_sclerotic_glomeruli'], MOD, slide,mpp, h_threshold=args.h_threshold, saturation_threshold=args.saturation_threshold)
+        s_gloms = process_glom_features(mask_xml, NAMES_DICT['globally_sclerotic_glomeruli'], MOD, slide,mpp, h_threshold=args.h_threshold, saturation_threshold=args.saturation_threshold)
+        tubs = process_tubules_features(mask_xml, NAMES_DICT['tubules'], MOD, slide,mpp,whitespace_threshold=args.whitespace_threshold)
+        arts = process_arteriol_features(mask_xml, NAMES_DICT['arteries/arterioles'], mpp)
+
+
+        all_comparts = [gloms,s_gloms,tubs, arts]
+        all_columns = [['x1','x2','y1','y2','Area','Mesangial Area','Mesangial Fraction'],
+                    ['x1','x2','y1','y2','Area','Mesangial Area','Mesangial Fraction'],
+                    ['x1','x2','y1','y2','Average TBM Thickness','Average Cell Thickness','Luminal Fraction'],
+                    ['x1','x2','y1','y2','Arterial Area']]
+        compart_names = ['gloms','s_gloms','tubs','arts']
+        
+        output_filename = os.path.join(args.output_dir, image_file.split('.')[0] + '.xlsx')
+        print("printf '\tWriting Excel file: [{}]\n'".format(output_filename))
+        with pd.ExcelWriter(args.output_filename) as writer:
+            for idx,compart in enumerate(all_comparts):
+                df = pd.DataFrame(compart,columns=all_columns[idx])
+                df.to_excel(writer, index=False, sheet_name=compart_names[idx])
 
 if __name__ == "__main__":
-    main(CLIArgumentParser().parse_args())
+    main()

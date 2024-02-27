@@ -12,8 +12,8 @@
     <label>IO</label>
     <description>Input/output parameters</description>
     <image>
-      <name>input_file</name>
-      <label>input_file</label>
+      <name>files</name>
+      <label>files</label>
       <description>input file</description>
       <channel>input</channel>
       <index>0</index>

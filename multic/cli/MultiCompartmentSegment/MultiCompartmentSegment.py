@@ -4,23 +4,8 @@ from ctk_cli import CLIArgumentParser
 sys.path.append('..')
 from segmentationschool.segmentation_school import run_it
 
-def main(args):
 
-    folder = args.base_dir
-    base_dir_id = folder.split('/')[-2]
-    _ = os.system("printf '\nUsing data from girder_client Folder: {}\n'".format(folder))
-    print('new version')
-    _ = os.system("printf '\n---\n\nFOUND: [{}]\n'".format(args.files))
-
-    cwd = os.getcwd()
-    print(cwd)
-    os.chdir(cwd)
-
-    #cmd = "python3 ../segmentationschool/segmentation_school.py --option {} --base_dir {} --modelfile {} --girderApiUrl {} --girderToken {} --files {}".format('predict', args.base_dir, args.modelfile, args.girderApiUrl, args.girderToken, args.input_file)
-    #print(cmd)
-    #sys.stdout.flush()
-    #os.system(cmd)
-    default_vals = {
+DEFAULT_VALS = {
         'girderApiUrl':' ',
         'girderToken':' ',
         'files':' ',
@@ -88,9 +73,23 @@ def main(args):
         'LR_region_pad':50,
         'show_interstitium':True
     }
-    for d in default_vals:
+
+
+def main(args):
+
+    folder = args.base_dir
+    base_dir_id = folder.split('/')[-2]
+    _ = os.system("printf '\nUsing data from girder_client Folder: {}\n'".format(folder))
+    print('new version')
+    _ = os.system("printf '\n---\n\nFOUND: [{}]\n'".format(args.files))
+
+    cwd = os.getcwd()
+    print(cwd)
+    os.chdir(cwd)
+
+    for d in DEFAULT_VALS:
         if d not in list(vars(args).keys()):
-            setattr(args,d,default_vals[d])
+            setattr(args,d,DEFAULT_VALS[d])
 
     print(vars(args))
     for d in vars(args):

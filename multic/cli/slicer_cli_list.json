@@ -4,5 +4,8 @@
   },
   "FeatureExtraction": {
     "type"    : "python"
+  },
+  "ReferenceFeatureExtraction": {
+    "type"    : "python"
   }
 }

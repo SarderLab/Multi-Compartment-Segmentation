@@ -47,7 +47,7 @@ def str2bool(v):
 def main(args):
 
     from segmentationschool.Codes.InitializeFolderStructure import initFolder, purge_training_set, prune_training_set
-    # from extract_reference_features import getKidneyReferenceFeatures,summarizeKidneyReferenceFeatures
+    from segmentationschool.Codes.extract_reference_features import getKidneyReferenceFeatures
     # from TransformXMLs import splice_cortex_XMLs,register_aperio_scn_xmls
     # from randomCropGenerator import randomCropGenerator
     if args.one_network == True:
@@ -280,6 +280,9 @@ if __name__ == '__main__':
         help='padded region for low resolution region extraction')
     parser.add_argument('--show_interstitium', dest='show_interstitium', default=True ,type=str2bool,
         help='padded region for low resolution region extraction')
+    
+    parser.add_argument('--xml_path', dest='xml_path', default=' ' ,type=str,
+        help='path to xml file')
 
 
 

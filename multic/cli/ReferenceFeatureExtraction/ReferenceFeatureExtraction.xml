@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<executable>
+  <category>HistomicsTK</category>
+  <title>Multi Compartment Training</title>
+  <description>Trains Multi compartment segmentation model</description>
+  <version>0.1.0</version>
+  <documentation-url>https://github.com/SarderLab/Multi-Compartment-Segmentation</documentation-url>
+  <license>Apache 2.0</license>
+  <contributor>Sayat Mimar (UFL)</contributor>
+  <acknowledgements>This work is part of efforts in digital pathology by the Sarder Lab: UFL.</acknowledgements>
+  <parameters>
+    <label>IO</label>
+    <description>Input/output parameters</description>
+    <image>
+      <name>input_file</name>
+      <label>input_file</label>
+      <description>input file</description>
+      <channel>input</channel>
+      <index>0</index>
+    </image>
+    <directory>
+      <name>base_dir</name>
+      <label>Base Directory</label>
+      <description>Base Directory for the model</description>
+      <channel>input</channel>
+      <index>1</index>
+    </directory>
+  </parameters>
+  <parameters advanced="true">
+    <label>Girder API URL and Key</label>
+    <description>A Girder API URL and token for Girder client</description>
+    <string>
+      <name>girderApiUrl</name>
+      <longflag>api-url</longflag>
+      <label>Girder API URL</label>
+      <description>A Girder API URL (e.g., https://girder.example.com:443/api/v1)</description>
+      <default></default>
+    </string>
+    <string>
+      <name>girderToken</name>
+      <longflag>token</longflag>
+      <label>Girder API Token</label>
+      <description>A Girder token</description>
+      <default></default>
+    </string>
+  </parameters>
+</executable>

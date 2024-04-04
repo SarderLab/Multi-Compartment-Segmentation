@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <executable>
   <category>HistomicsTK</category>
-  <title>Multi Compartment Training</title>
-  <description>Trains Multi compartment segmentation model</description>
+  <title>Extract Extended Clinical Features</title>
+  <description>Extract reference features</description>
   <version>0.1.0</version>
   <documentation-url>https://github.com/SarderLab/Multi-Compartment-Segmentation</documentation-url>
   <license>Apache 2.0</license>

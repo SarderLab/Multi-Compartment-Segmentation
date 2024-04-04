@@ -40,9 +40,9 @@ def getKidneyReferenceFeatures(args):
 
     slide_item_id = item_dict[file_name]
 
-    #output_dir = args.base_dir + '/tmp'
+    output_dir = args.base_dir + '/'
     slide_name,slideExt=file_name.split('.')
-    xlsx_path = slide_name + '.xlsx'
+    xlsx_path = output_dir + 'ExtendedClinical' + '.xlsx'
 
     annotatedXMLs=[args.xml_path]
     for xml in annotatedXMLs:
@@ -354,12 +354,8 @@ def getKidneyReferenceFeatures(args):
             worksheet6.write(idx+1,1,art[1])
             worksheet6.write(idx+1,2,art[4])
 
-
-        try:
-            workbook.close(save_to=xlsx_path)
-        except:
-            print("An exception occurred")
-
+        workbook.close()
+        
         gc.uploadFileToItem(slide_item_id, xlsx_path, reference=None, mimeType=None, filename=None, progressCallback=None)
         print('Done.')
         # exit()

@@ -14,6 +14,7 @@ NAMES = ['cortical_interstitium','medullary_interstitium','non_globally_scleroti
 def main(args):
 
     folder = args.base_dir
+    wsi = args.input_file
     base_dir_id = folder.split('/')[-2]
     _ = os.system("printf '\nUsing data from girder_client Folder: {}\n'".format(folder))
 
@@ -32,6 +33,8 @@ def main(args):
 
     for file in files:
         slidename = file['name']
+        if wsi.split('/')[-1] != slidename:
+            continue
         _ = os.system("printf '\n---\n\nFOUND: [{}]\n'".format(slidename))
         skipSlide = 0
 

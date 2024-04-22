@@ -134,7 +134,7 @@ if __name__ == '__main__':
         help='directory with xml transformation targets')
     parser.add_argument('--cortextarget', dest='cortextarget', default=None,type=str,
         help='directory with cortex annotations for splicing')
-    parser.add_argument('--output', dest='output', default=None,type=str,
+    parser.add_argument('--output_dir', dest='output_dir', default=None,type=str,
         help='directory to save output transformed XMLs')
     parser.add_argument('--wsis', dest='wsis', default=None,type=str,
         help='directory of WSIs for reference feature extraction')
@@ -283,6 +283,12 @@ if __name__ == '__main__':
     
     parser.add_argument('--xml_path', dest='xml_path', default=' ' ,type=str,
         help='path to xml file')
+
+    parser.add_argument('--ext', dest='ext', default='.svs' ,type=str,
+        help='file extention')
+
+    parser.add_argument('--platform', dest='platform', default='DSA' ,type=str,
+        help='Run Platform, HPG or DSA')
 
 
 

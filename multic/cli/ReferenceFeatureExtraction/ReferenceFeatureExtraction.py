@@ -113,7 +113,7 @@ def main(args):
 
 
 
-    cmd = "python3 ../segmentationschool/segmentation_school.py --option {} --base_dir {} --files {} --xml_path {} --girderApiUrl {} --girderToken {}".format('get_features', args.base_dir, args.input_file, xml_path, args.girderApiUrl, args.girderToken)
+    cmd = "python3 ../segmentationschool/segmentation_school.py --option {} --base_dir {} --files {} --xml_path {} --platform {} --girderApiUrl {} --girderToken {}".format('get_features', args.base_dir, args.input_file, xml_path, 'DSA', args.girderApiUrl, args.girderToken)
     print(cmd)
     sys.stdout.flush()
     os.system(cmd)

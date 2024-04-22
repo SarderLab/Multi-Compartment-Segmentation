@@ -2,7 +2,7 @@ import os, cv2
 import numpy as np
 
 import lxml.etree as ET
-import girder_client
+
 from matplotlib import path
 from skimage.color import rgb2lab,rgb2hsv
 
@@ -22,45 +22,53 @@ from skimage.filters import *
 
 def getKidneyReferenceFeatures(args):
 
+    folder = args.base_dir
+
     # assert args.target is not None, 'Directory of xmls must be specified, use --target /path/to/files.xml'
     # assert args.wsis is not None, 'Directory of WSIs must be specified, use --wsis /path/to/wsis'
+    if args.platform == 'DSA':
+        import girder_client
+        gc = girder_client.GirderClient(apiUrl=args.girderApiUrl)
+        gc.setToken(args.girderToken)
 
-    gc = girder_client.GirderClient(apiUrl=args.girderApiUrl)
-    gc.setToken(args.girderToken)
+        girder_folder_id = folder.split('/')[-2]
+        file_name = args.files.split('/')[-1]
+        files = list(gc.listItem(girder_folder_id))
+        item_dict = dict()
 
-    folder = args.base_dir
-    girder_folder_id = folder.split('/')[-2]
-    file_name = args.files.split('/')[-1]
-    files = list(gc.listItem(girder_folder_id))
-    item_dict = dict()
+        for file in files:
+            d = {file['name']: file['_id']}
+            item_dict.update(d)
 
-    for file in files:
-        d = {file['name']: file['_id']}
-        item_dict.update(d)
+        slide_item_id = item_dict[file_name]
+        output_dir = args.base_dir
+        slide_name,slideExt=file_name.split('.')
+        items=[(args.files, args.xml_path)]
 
-    slide_item_id = item_dict[file_name]
+    elif args.platform == 'HPG':
+        image_files = [image_name for _, _, files in os.walk(folder) for image_name in files if image_name.endswith('.xml')]
+        image_names = [os.path.join(folder, f.split('.')[0]) for f in image_files]
+        slideExt = args.ext
+        output_dir = args.output_dir
+        # each item in items is a tuple of (images, annotations)
+        items = [(f + slideExt, f + '.xml') for f in image_names]
 
-    output_dir = args.base_dir + '/'
-    slide_name,slideExt=file_name.split('.')
-    xlsx_path = output_dir + 'ExtendedClinical' + '.xlsx'
+    else:
+        raise Exception("Please Enter a valid Platform, DSA or HPG")
 
-    annotatedXMLs=[args.xml_path]
-    for xml in annotatedXMLs:
-        # print(xml,end='\r',flush=True)
+    for i in range(len(items)):
 
-        print(xml,'here')
-        write_minmax_to_xml(xml)
-        # for ext in args.wsi_ext.split(','):
+        svsfile, xmlfile = items[i]
 
-        #     if os.path.isfile(os.path.join(args.wsis,xml.split('/')[-1].replace('.xml',ext))):
-        #         wsi=os.path.join(args.wsis,xml.split('/')[-1].replace('.xml',ext))
-        #         break
+        print(xmlfile,'here')
+        write_minmax_to_xml(xmlfile)
+
         slideExt=file_name.split('.')[-1]
         all_contours = {'1':[],'2':[],'3':[],'4':[],'5':[],'6':[]}
         # cortex medulla glomeruli scl_glomeruli tubules arteries(ioles)
-        tree = ET.parse(xml)
+        tree = ET.parse(xmlfile)
         root = tree.getroot()
-        basename=os.path.splitext(xml)[0]
+        basename=os.path.splitext(xmlfile)[0]
         for Annotation in root.findall("./Annotation"): # for all annotations
             annotationID = Annotation.attrib['Id']
             if annotationID not in ['1','2','3','4','5','6']:
@@ -79,7 +87,7 @@ def getKidneyReferenceFeatures(args):
         cortexarea=0
         medullaarea=0
 
-        slide=TiffSlide(args.files)
+        slide=TiffSlide(svsfile)
         if slideExt =='.scn':
             dim_x=int(slide.properties['tiffslide.bounds-width'])## add to columns
             dim_y=int(slide.properties['tiffslide.bounds-height'])## add to rows
@@ -142,6 +150,7 @@ def getKidneyReferenceFeatures(args):
             medulla_path=None
         pseudocortexarea=total_tissue_area-medullaarea
         #
+        xlsx_path = os.path.join(output_dir, os.path.basename(svsfile).split('.')[0] +'_extended_clinical'+'.xlsx')
         workbook=xlsxwriter.Workbook(xlsx_path)
         worksheet1 = workbook.add_worksheet('Summary')
         worksheet2 = workbook.add_worksheet('Interstitium')
@@ -175,28 +184,28 @@ def getKidneyReferenceFeatures(args):
         art_features=Parallel(n_jobs=cores)(delayed(points_to_features_art)(points,
             args,args.min_size[5],cortex_path,medulla_path,args.files,MOD) for points in tqdm(all_contours['6'],colour='magenta',unit='Artery(-iole)',leave=False))
         print('Generating output file..')
-        glom_features=[i for i in glom_features if i is not None]
-        sglom_features=[i for i in sglom_features if i is not None]
-        tub_features=[i for i in tub_features if i is not None]
-        art_features=[i for i in art_features if i is not None]
+        glom_features=np.array([i for i in glom_features if i is not None])
+        sglom_features=np.array([i for i in sglom_features if i is not None])
+        tub_features=np.array([i for i in tub_features if i is not None])
+        art_features=np.array([i for i in art_features if i is not None])
 
         # gloms_features=[i for i in glom_features if i[0]>args.min_sizes[2]]
         # sglom_features=[i for i in sglom_features if i[0]>args.min_sizes[3]]
 
         # cortexgloms=[i for i in glom_features if not i[3]]
-        cortextubs=[i for i in tub_features if not i[3]]
-        cortexarts=[i for i in art_features if not i[3]]
+        cortextubs=np.array([i for i in tub_features if not i[3]])
+        cortexarts=np.array([i for i in art_features if not i[3]])
 
-        medullatubs=[i for i in tub_features if i[3]]
-        medullaarts=[i for i in art_features if i[3]]
+        medullatubs=np.array([i for i in tub_features if i[3]])
+        medullaarts=np.array([i for i in art_features if i[3]])
 
 
         if pseudocortexarea>0:
             cortex_glom_area=np.sum(np.array(glom_features)[:,0])
             cortex_glom_density=float(cortex_glom_area)/float(pseudocortexarea)
-            cortex_tub_area=np.sum(np.array(cortextubs)[:,0])
+            cortex_tub_area=np.sum(cortextubs[:,0])
             cortex_tub_density=float(cortex_tub_area)/float(pseudocortexarea)
-            cortex_art_area=np.sum(np.array(cortexarts)[:,0])
+            cortex_art_area=np.sum(cortexarts[:,0])
             cortex_art_density=float(cortex_art_area)/float(pseudocortexarea)
             # downsample_cortex=get_downsample_cortex(args,all_contours['1'])
             # exit()
@@ -208,9 +217,9 @@ def getKidneyReferenceFeatures(args):
             cortex_art_density=None
         if medullaarea>0 and len(medullatubs)>0:
 
-            medulla_tub_area=np.sum(np.array(medullatubs)[:,0])
+            medulla_tub_area=np.sum(medullatubs[:,0])
             if len(medullaarts)>0:
-                medulla_art_area=np.sum(np.array(medullaarts)[:,0])
+                medulla_art_area=np.sum(medullaarts[:,0])
                 medulla_art_density=float(medulla_art_area)/float(medullaarea)
             else:
                 medulla_art_density=None
@@ -218,11 +227,7 @@ def getKidneyReferenceFeatures(args):
         else:
             medulla_tub_density=None
             medulla_art_density=None
-        glom_features=np.array(glom_features)
-        sglom_features=np.array(sglom_features)
-        tub_features=np.array(tub_features)
-        art_features=np.array(art_features)
-        cortexarts=np.array(cortexarts)
+
         worksheet1.write(0,0,'Glomerular density - count:')
         worksheet1.write(0,1,len(glom_features)/pseudocortexarea)
         worksheet1.write(1,0,'Average glomerular area:')
@@ -265,11 +270,16 @@ def getKidneyReferenceFeatures(args):
             worksheet1.write(13,1,np.mean(cortextubs[:,1]))
             worksheet1.write(14,1,np.std(cortextubs[:,1]))
         if medullaarea>0:
-            medullatubs=np.array(medullatubs)
-            worksheet1.write(15,1,np.mean(medullatubs[:,0]))
-            worksheet1.write(16,1,np.std(medullatubs[:,0]))
-            worksheet1.write(17,1,np.mean(medullatubs[:,1]))
-            worksheet1.write(18,1,np.std(medullatubs[:,1]))
+            if len(medullatubs)>0:
+                worksheet1.write(15,1,np.mean(medullatubs[:,0]))
+                worksheet1.write(16,1,np.std(medullatubs[:,0]))
+                worksheet1.write(17,1,np.mean(medullatubs[:,1]))
+                worksheet1.write(18,1,np.std(medullatubs[:,1]))
+            else:
+                worksheet1.write(15,1,0)
+                worksheet1.write(16,1,0)
+                worksheet1.write(17,1,0)
+                worksheet1.write(18,1,0)
 
         worksheet1.write(19,0,'Cortical arterial(olar) density')
         worksheet1.write(19,1,len(cortexarts)/pseudocortexarea)
@@ -316,23 +326,56 @@ def getKidneyReferenceFeatures(args):
         worksheet1.write(33,1,len(glom_features))
         worksheet1.write(34,0,'sGlomerulus count')
         worksheet1.write(34,1,len(sglom_features))
+
         worksheet3.write(0,0,'Area')
         worksheet3.write(0,1,'Radius')
+        worksheet3.write(0,2,'x1')
+        worksheet3.write(0,3,'x2')
+        worksheet3.write(0,4,'y1')
+        worksheet3.write(0,5,'y2')
+
         for idx,glom in enumerate(glom_features):
             worksheet3.write(idx+1,0,glom[0])
             worksheet3.write(idx+1,1,glom[1])
 
+            worksheet3.write(idx+1,2,glom[4])
+            worksheet3.write(idx+1,3,glom[5])
+            worksheet3.write(idx+1,4,glom[6])
+            worksheet3.write(idx+1,5,glom[7])
+
+
         worksheet4.write(0,0,'Area')
         worksheet4.write(0,1,'Radius')
+
+        worksheet4.write(0,2,'x1')
+        worksheet4.write(0,3,'x2')
+        worksheet4.write(0,4,'y1')
+        worksheet4.write(0,5,'y2')
+
         for idx,sglom in enumerate(sglom_features):
             worksheet4.write(idx+1,0,sglom[0])
             worksheet4.write(idx+1,1,sglom[1])
 
+            worksheet4.write(idx+1,2,sglom[4])
+            worksheet4.write(idx+1,3,sglom[5])
+            worksheet4.write(idx+1,4,sglom[6])
+            worksheet4.write(idx+1,5,sglom[7])
+
         worksheet5.write(0,0,'Area')
         worksheet5.write(0,1,'Radius')
+
+        worksheet5.write(0,6,'x1')
+        worksheet5.write(0,7,'x2')
+        worksheet5.write(0,8,'y1')
+        worksheet5.write(0,9,'y2')
         for idx,tub in enumerate(tub_features):
             worksheet5.write(idx+1,0,tub[0])
             worksheet5.write(idx+1,1,tub[1])
+
+            worksheet5.write(idx+1,6,tub[4])
+            worksheet5.write(idx+1,7,tub[5])
+            worksheet5.write(idx+1,8,tub[6])
+            worksheet5.write(idx+1,9,tub[7])
 
         worksheet5.write(0,2,'Cortical areas')
         worksheet5.write(0,3,'Cortical radii')
@@ -349,14 +392,26 @@ def getKidneyReferenceFeatures(args):
         worksheet6.write(0,0,'Area')
         worksheet6.write(0,1,'Radius')
         worksheet6.write(0,2,'Luminal ratio')
+
+        worksheet6.write(0,3,'x1')
+        worksheet6.write(0,4,'x2')
+        worksheet6.write(0,5,'y1')
+        worksheet6.write(0,6,'y2')
         for idx,art in enumerate(art_features):
             worksheet6.write(idx+1,0,art[0])
             worksheet6.write(idx+1,1,art[1])
             worksheet6.write(idx+1,2,art[4])
 
+            worksheet6.write(idx+1,3,art[5])
+            worksheet6.write(idx+1,4,art[6])
+            worksheet6.write(idx+1,5,art[7])
+            worksheet6.write(idx+1,6,art[8])
+
         workbook.close()
-        
-        gc.uploadFileToItem(slide_item_id, xlsx_path, reference=None, mimeType=None, filename=None, progressCallback=None)
+        if args.platform == 'DSA':
+            gc.uploadFileToItem(slide_item_id, xlsx_path, reference=None, mimeType=None, filename=None, progressCallback=None)
+            print('Girder file uploaded!')
+
         print('Done.')
         # exit()
     # Parallel(n_jobs=num_cores, backend='threading')(delayed(chop_wsi)(, choppable_regions=choppable_regions)  for idxx, j in enumerate(index_x))
@@ -770,7 +825,7 @@ def points_to_features_glom(points,args,min_size,cortex,medulla):
         dist=distance_transform_edt(binary_mask)
 
 
-        return [a,np.max(dist),None,containedmedulla]
+        return [a,np.max(dist),None,containedmedulla,yMin,yMax,xMin,xMax]
 
 def points_to_features_tub(points,args,min_size,cortex,medulla):
     a=cv2.contourArea(points)
@@ -790,7 +845,7 @@ def points_to_features_tub(points,args,min_size,cortex,medulla):
         binary_mask=cv2.fillPoly(binary_mask,[points],1)
         dist=distance_transform_edt(binary_mask)
 
-        return [a,np.max(dist),None,containedmedulla]
+        return [a,np.max(dist),None,containedmedulla,yMin,yMax,xMin,xMax]
 
 
 def points_to_features_art(points,args,min_size,cortex,medulla,wsi,MOD):
@@ -809,7 +864,7 @@ def points_to_features_art(points,args,min_size,cortex,medulla,wsi,MOD):
         image=np.array(TiffSlide(wsi).read_region((xMin,yMin),0,(xMax-xMin,yMax-yMin)))[:,:,:3]
 
         if xMax-xMin>5000 or yMax-yMin>5000:
-            return [a,None,None,containedmedulla,None]
+            return [a,None,None,containedmedulla,None, yMin,yMax,xMin,xMax]
         binary_mask=np.zeros((int(yMax-yMin),int(xMax-xMin)))
         points[:,0]-=xMin
         points[:,1]-=yMin
@@ -863,7 +918,7 @@ def points_to_features_art(points,args,min_size,cortex,medulla,wsi,MOD):
         #
         #     return [a,distMax*2,containedcortex,containedmedulla,(np.max(WSdist)*2)/(distMax*2)]
         # else:
-        return [a,distMax,None,containedmedulla,np.max(WSdist)/distMax]
+        return [a,distMax,None,containedmedulla,np.max(WSdist)/distMax,yMin,yMax,xMin,xMax]
 
 
 

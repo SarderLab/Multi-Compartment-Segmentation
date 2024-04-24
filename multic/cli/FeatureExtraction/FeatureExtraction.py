@@ -52,6 +52,7 @@ def main(args):
         item_dict.update(d)
     
     file_id = item_dict[file_name]
+    xlsx_path = os.path.join(args.base_dir, os.path.basename(file_name).split('.')[0] +'_pathomic'+'.xlsx')
 
     annotations = gc.get('/annotation/item/{}'.format(file_id))
 
@@ -75,17 +76,19 @@ def main(args):
 
 
     all_comparts = [gloms,s_gloms,tubs, arts]
-    all_columns = [['x1','x2','y1','y2','Area','Mesangial Area','Mesangial Fraction'],
-                   ['x1','x2','y1','y2','Area','Mesangial Area','Mesangial Fraction'],
-                   ['x1','x2','y1','y2','Average TBM Thickness','Average Cell Thickness','Luminal Fraction'],
-                   ['x1','x2','y1','y2','Arterial Area']]
+    all_columns = [['x1','x2','y1','y2','Area (micron^2)','Mesangial Area (micron^2)','Mesangial Fraction'],
+                   ['x1','x2','y1','y2','Area (micron^2)','Mesangial Area (micron^2)','Mesangial Fraction'],
+                   ['x1','x2','y1','y2','Average TBM Thickness (micron)','Average Cell Thickness (micron)','Luminal Fraction'],
+                   ['x1','x2','y1','y2','Arterial Area (micron^2)']]
     compart_names = ['gloms','s_gloms','tubs','arts']
     
-    _ = os.system("printf '\tWriting Excel file: [{}]\n'".format(args.output_filename))
-    with pd.ExcelWriter(args.output_filename) as writer:
+    _ = os.system("printf '\tWriting Excel file: [{}]\n'".format(xlsx_path))
+    with pd.ExcelWriter(xlsx_path) as writer:
         for idx,compart in enumerate(all_comparts):
             df = pd.DataFrame(compart,columns=all_columns[idx])
             df.to_excel(writer, index=False, sheet_name=compart_names[idx])
+    
+    gc.uploadFileToItem(file_id, xlsx_path, reference=None, mimeType=None, filename=None, progressCallback=None)
 
 if __name__ == "__main__":
     main(CLIArgumentParser().parse_args())

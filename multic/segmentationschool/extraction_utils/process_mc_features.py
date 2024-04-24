@@ -160,8 +160,8 @@ def process_tubules_features(mask_xml, tub_value, MOD, slide, mpp, whitespace_th
         tubs[i,1] = x2
         tubs[i,2] = y1
         tubs[i,3] = y2
-        tubs[i,4] = tbm_avg*(mpp**2)
-        tubs[i,5] = cyto_avg*(mpp**2)
+        tubs[i,4] = tbm_avg*mpp
+        tubs[i,5] = cyto_avg*mpp
         tubs[i,6] = np.sum(WS) / np.sum(mask)#
 
     del tubules

@@ -66,20 +66,19 @@ def main(args):
     slide = TiffSlide(args.input_file)
     x,y = slide.dimensions
 
-    mpp = slide.properties['tiffslide.mpp-x']
     mask_xml = xml_to_mask(annotations_filtered,(0,0),(x,y),downsample_factor=args.downsample_factor)
 
-    gloms = process_glom_features(mask_xml, NAMES_DICT['non_globally_sclerotic_glomeruli'], MOD, slide,mpp, h_threshold=args.h_threshold, saturation_threshold=args.saturation_threshold)
-    s_gloms = process_glom_features(mask_xml, NAMES_DICT['globally_sclerotic_glomeruli'], MOD, slide,mpp, h_threshold=args.h_threshold, saturation_threshold=args.saturation_threshold)
-    tubs = process_tubules_features(mask_xml, NAMES_DICT['tubules'], MOD, slide,mpp,whitespace_threshold=args.whitespace_threshold)
-    arts = process_arteriol_features(mask_xml, NAMES_DICT['arteries/arterioles'], mpp)
+    gloms = process_glom_features(mask_xml, NAMES_DICT['non_globally_sclerotic_glomeruli'], MOD, slide, h_threshold=args.h_threshold, saturation_threshold=args.saturation_threshold)
+    s_gloms = process_glom_features(mask_xml, NAMES_DICT['globally_sclerotic_glomeruli'], MOD, slide, h_threshold=args.h_threshold, saturation_threshold=args.saturation_threshold)
+    tubs = process_tubules_features(mask_xml, NAMES_DICT['tubules'], MOD, slide, whitespace_threshold=args.whitespace_threshold)
+    arts = process_arteriol_features(mask_xml, NAMES_DICT['arteries/arterioles'])
 
 
     all_comparts = [gloms,s_gloms,tubs, arts]
-    all_columns = [['x1','x2','y1','y2','Area (micron^2)','Mesangial Area (micron^2)','Mesangial Fraction'],
-                   ['x1','x2','y1','y2','Area (micron^2)','Mesangial Area (micron^2)','Mesangial Fraction'],
-                   ['x1','x2','y1','y2','Average TBM Thickness (micron)','Average Cell Thickness (micron)','Luminal Fraction'],
-                   ['x1','x2','y1','y2','Arterial Area (micron^2)']]
+    all_columns = [['x1','x2','y1','y2','Area (pixel^2)','Mesangial Area (pixel^2)','Mesangial Fraction'],
+                   ['x1','x2','y1','y2','Area (pixel^2)','Mesangial Area (pixel^2)','Mesangial Fraction'],
+                   ['x1','x2','y1','y2','Average TBM Thickness (pixel)','Average Cell Thickness (pixel)','Luminal Fraction'],
+                   ['x1','x2','y1','y2','Arterial Area (pixel^2)']]
     compart_names = ['gloms','s_gloms','tubs','arts']
     
     _ = os.system("printf '\tWriting Excel file: [{}]\n'".format(xlsx_path))

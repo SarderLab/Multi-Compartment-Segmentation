@@ -11,7 +11,7 @@ from .PAS_deconvolution import deconvolution
 
 GLOM_DICT = {3:'Glomeruli',4:'Sclerotic Glomeruli'}
 
-def process_glom_features(mask_xml, glom_value, MOD, slide, mpp, h_threshold, saturation_threshold):
+def process_glom_features(mask_xml, glom_value, MOD, slide, h_threshold, saturation_threshold):
 
     glomeruli = mask_xml == glom_value
     glomeruli = glomeruli.astype(np.uint8)
@@ -22,7 +22,7 @@ def process_glom_features(mask_xml, glom_value, MOD, slide, mpp, h_threshold, sa
 
     for i in tqdm(range(glomeruli_unique_max),desc=GLOM_DICT[glom_value]):
         #Area, Cellularity, Mesangial Area to Cellularity Ratio
-        area = (props[i].area)*(mpp**2)
+        area = (props[i].area)
         x1,y1,x2,y2 = props[i].bbox
 
         crop = slide.read_region((y1,x1),0,(y2-y1,x2-x1))
@@ -51,21 +51,21 @@ def process_glom_features(mask_xml, glom_value, MOD, slide, mpp, h_threshold, sa
         mask_pixels = np.sum(mask)
         pas_pixels = np.sum(pas_seg)
 
-        mes_fraction = (pas_pixels*(mpp**2)) / area
+        mes_fraction = (pas_pixels)/area
 
         gloms[i,0] = x1
         gloms[i,1] = x2
         gloms[i,2] = y1
         gloms[i,3] = y2
         gloms[i,4] = area
-        gloms[i,5] = pas_pixels*(mpp**2)
+        gloms[i,5] = pas_pixels
         gloms[i,6] = mes_fraction
     
     del glomeruli
 
     return gloms
 
-def process_tubules_features(mask_xml, tub_value, MOD, slide, mpp, whitespace_threshold):
+def process_tubules_features(mask_xml, tub_value, MOD, slide, whitespace_threshold):
 
     tubules = mask_xml == tub_value
     tubules = tubules.astype(np.uint8)
@@ -77,7 +77,7 @@ def process_tubules_features(mask_xml, tub_value, MOD, slide, mpp, whitespace_th
     for i in tqdm(range(tubules_unique_max),desc='Tubules'):
         #Area, Cellularity, Mesangial Area to Cellularity Ratio
         # i=2615
-        area = (props[i].area)*(mpp**2)
+        area = (props[i].area)
         x1,y1,x2,y2 = props[i].bbox
 
 
@@ -160,8 +160,8 @@ def process_tubules_features(mask_xml, tub_value, MOD, slide, mpp, whitespace_th
         tubs[i,1] = x2
         tubs[i,2] = y1
         tubs[i,3] = y2
-        tubs[i,4] = tbm_avg*(mpp**2)
-        tubs[i,5] = cyto_avg*(mpp**2)
+        tubs[i,4] = tbm_avg
+        tubs[i,5] = cyto_avg
         tubs[i,6] = np.sum(WS) / np.sum(mask)#
 
     del tubules
@@ -169,7 +169,7 @@ def process_tubules_features(mask_xml, tub_value, MOD, slide, mpp, whitespace_th
     return tubs
 
 
-def process_arteriol_features(mask_xml, art_value, mpp):
+def process_arteriol_features(mask_xml, art_value):
 
     arteries = mask_xml == art_value
     arteries = arteries.astype(np.uint8)
@@ -179,7 +179,7 @@ def process_arteriol_features(mask_xml, art_value, mpp):
     props = measure.regionprops(arteries)
 
     for i in tqdm(range(arts_unique_max),desc='Arteries'):
-        area = (props[i].area)*(mpp**2)
+        area = (props[i].area)
         x1,y1,x2,y2 = props[i].bbox
 
         arts[i,0] = x1

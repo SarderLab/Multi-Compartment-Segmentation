@@ -63,7 +63,7 @@ def getKidneyReferenceFeatures(args):
         print(xmlfile,'here')
         write_minmax_to_xml(xmlfile)
 
-        slideExt=file_name.split('.')[-1]
+
         all_contours = {'1':[],'2':[],'3':[],'4':[],'5':[],'6':[]}
         # cortex medulla glomeruli scl_glomeruli tubules arteries(ioles)
         tree = ET.parse(xmlfile)
@@ -182,7 +182,7 @@ def getKidneyReferenceFeatures(args):
             args,args.min_size[4],cortex_path,medulla_path) for points in tqdm(all_contours['5'],colour='blue',unit='Tubule',leave=False))
 
         art_features=Parallel(n_jobs=cores)(delayed(points_to_features_art)(points,
-            args,args.min_size[5],cortex_path,medulla_path,args.files,MOD) for points in tqdm(all_contours['6'],colour='magenta',unit='Artery(-iole)',leave=False))
+            args,args.min_size[5],cortex_path,medulla_path,svsfile,MOD) for points in tqdm(all_contours['6'],colour='magenta',unit='Artery(-iole)',leave=False))
         print('Generating output file..')
         glom_features=np.array([i for i in glom_features if i is not None])
         sglom_features=np.array([i for i in sglom_features if i is not None])

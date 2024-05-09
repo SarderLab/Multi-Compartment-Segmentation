@@ -31,19 +31,11 @@ def getKidneyReferenceFeatures(args):
         gc = girder_client.GirderClient(apiUrl=args.girderApiUrl)
         gc.setToken(args.girderToken)
 
-        girder_folder_id = folder.split('/')[-2]
-        file_name = args.files.split('/')[-1]
-        files = list(gc.listItem(girder_folder_id))
-        item_dict = dict()
-
-        for file in files:
-            d = {file['name']: file['_id']}
-            item_dict.update(d)
-
-        slide_item_id = item_dict[file_name]
+        file_name = args.file.split('/')[-1]
+        slide_item_id = args.item_id
         output_dir = args.base_dir
         slide_name,slideExt=file_name.split('.')
-        items=[(args.files, args.xml_path)]
+        items=[(args.file, args.xml_path)]
 
     elif args.platform == 'HPG':
         image_files = [image_name for _, _, files in os.walk(folder) for image_name in files if image_name.endswith('.xml')]
@@ -327,8 +319,8 @@ def getKidneyReferenceFeatures(args):
         worksheet1.write(34,0,'sGlomerulus count')
         worksheet1.write(34,1,len(sglom_features))
 
-        worksheet3.write(0,0,'Area')
-        worksheet3.write(0,1,'Radius')
+        worksheet3.write(0,0,'Area (pixel^2)')
+        worksheet3.write(0,1,'Radius (pixel)')
         worksheet3.write(0,2,'x1')
         worksheet3.write(0,3,'x2')
         worksheet3.write(0,4,'y1')
@@ -344,8 +336,8 @@ def getKidneyReferenceFeatures(args):
             worksheet3.write(idx+1,5,glom[7])
 
 
-        worksheet4.write(0,0,'Area')
-        worksheet4.write(0,1,'Radius')
+        worksheet4.write(0,0,'Area (pixel^2)')
+        worksheet4.write(0,1,'Radius (pixel)')
 
         worksheet4.write(0,2,'x1')
         worksheet4.write(0,3,'x2')
@@ -361,36 +353,26 @@ def getKidneyReferenceFeatures(args):
             worksheet4.write(idx+1,4,sglom[6])
             worksheet4.write(idx+1,5,sglom[7])
 
-        worksheet5.write(0,0,'Area')
-        worksheet5.write(0,1,'Radius')
+        worksheet5.write(0,0,'Area (pixel^2)')
+        worksheet5.write(0,1,'Radius (pixel)')
+        worksheet5.write(0,2,'In Medulla')
 
-        worksheet5.write(0,6,'x1')
-        worksheet5.write(0,7,'x2')
-        worksheet5.write(0,8,'y1')
-        worksheet5.write(0,9,'y2')
+        worksheet5.write(0,3,'x1')
+        worksheet5.write(0,4,'x2')
+        worksheet5.write(0,5,'y1')
+        worksheet5.write(0,6,'y2')
         for idx,tub in enumerate(tub_features):
             worksheet5.write(idx+1,0,tub[0])
             worksheet5.write(idx+1,1,tub[1])
+            worksheet5.write(idx+1,2,tub[3])
 
-            worksheet5.write(idx+1,6,tub[4])
-            worksheet5.write(idx+1,7,tub[5])
-            worksheet5.write(idx+1,8,tub[6])
-            worksheet5.write(idx+1,9,tub[7])
+            worksheet5.write(idx+1,3,tub[4])
+            worksheet5.write(idx+1,4,tub[5])
+            worksheet5.write(idx+1,5,tub[6])
+            worksheet5.write(idx+1,6,tub[7])
 
-        worksheet5.write(0,2,'Cortical areas')
-        worksheet5.write(0,3,'Cortical radii')
-        for idx,tub in enumerate(cortextubs):
-            worksheet5.write(idx+1,2,tub[0])
-            worksheet5.write(idx+1,3,tub[1])
-
-        worksheet5.write(0,4,'Medullary areas')
-        worksheet5.write(0,5,'Medullary radii')
-        for idx,tub in enumerate(medullatubs):
-            worksheet5.write(idx+1,4,tub[0])
-            worksheet5.write(idx+1,5,tub[1])
-
-        worksheet6.write(0,0,'Area')
-        worksheet6.write(0,1,'Radius')
+        worksheet6.write(0,0,'Area (pixel^2)')
+        worksheet6.write(0,1,'Radius (pixel)')
         worksheet6.write(0,2,'Luminal ratio')
 
         worksheet6.write(0,3,'x1')
@@ -413,399 +395,7 @@ def getKidneyReferenceFeatures(args):
             print('Girder file uploaded!')
 
         print('Done.')
-        # exit()
-    # Parallel(n_jobs=num_cores, backend='threading')(delayed(chop_wsi)(, choppable_regions=choppable_regions)  for idxx, j in enumerate(index_x))
 
-
-# def summarizeKidneyReferenceFeatures(args):
-#     #assert args.target is not None, 'Directory of xmls must be specified, use --target /path/to/files.xml'
-#     assert args.SummaryOption is not None, 'You must specify what type of summary is required with --SummaryOption'
-#     assert args.patientData is not None, 'You must provide patient metadata xlsx file with --patientData'
-#     if args.SummaryOption in ['ULDensity']:
-#         ULDensity(args)
-#     elif args.SummaryOption in ['BLDensity']:
-#         BLDensity(args)
-#     elif args.SummaryOption in ['standardScatter']:
-#         standardScatter(args)
-#     elif args.SummaryOption in ['anchorScatter']:
-#         anchorScatter(args)
-#     elif args.SummaryOption in ['aggregate']:
-#         aggregate(args)
-#     elif args.SummaryOption in ['JoyPlot']:
-#         JoyPlot(args)
-#     else:
-#         print('Incorrect SummaryOption')
-
-# def anchorScatter(args):
-#     patientData=pd.read_excel(args.patientData,usecols=[args.labelColumns,args.IDColumn,args.anchor],index_col=None)
-#     patientMetrics={}
-#     for idx,patientID in enumerate(patientData[args.IDColumn]):
-#         patientMetrics[patientID]=[patientData[args.labelColumns][idx],patientData[args.anchor][idx]]
-
-#     datafiles=glob.glob(os.path.join(args.target, "*.xlsx"))
-#     clinical_legend=[]
-#     clinical_anchor=[]
-#     for datafile in datafiles:
-#         patientID=os.path.splitext(datafile.split('/')[-1])[0]
-#         clinical_legend.append(str(patientMetrics[patientID][0]))
-#         clinical_anchor.append(patientMetrics[patientID][1])
-
-#     sortedPatientOrder=[x for  _, x in sorted(zip(clinical_legend,datafiles))]
-#     sortedPatientLegend=[x for x,_ in sorted(zip(clinical_legend,datafiles))]
-#     sortedPatientAnchor=[x for x,_ in sorted(zip(clinical_anchor,datafiles))]
-#     f1,f2=[int(i) for i in args.scatterFeatures.split(',')]
-#     # f1=5
-#     # f2=7
-
-#     temp=pd.read_excel(datafiles[0],sheet_name='Summary',header=None,index_row=None,index_col=0)
-#     index = temp.index
-#     xlabel=index[f1-1]
-#     ylabel=args.anchor
-
-#     popIdx=[]
-#     scatter_features=[]
-#     for idx,datafile in enumerate(tqdm(sortedPatientOrder,colour='red')):
-#         features=np.array(pd.read_excel(datafile,sheet_name='Summary',header=None,index_row=None,index_col=0))
-#         # print(np.array(features))
-#         if not np.isnan(features[f1-1]) and not np.isnan(features[f2-1]):
-#             scatter_features.append([features[f1-1][0],features[f2-1][0]])
-#         else:
-#             popIdx.append(idx)
-#     for p in popIdx[::-1]:
-#         sortedPatientLegend.pop(p)
-#         sortedPatientAnchor.pop(p)
-#     scatter_features=np.array(scatter_features)
-
-#     sns.scatterplot(x=scatter_features[:,0],y=sortedPatientAnchor,hue=sortedPatientLegend,palette='viridis',legend='auto')
-#     plt.xlabel(xlabel)
-#     plt.ylabel(ylabel)
-#     plt.legend(title=args.labelColumns)
-#     plt.show()
-# def standardScatter(args):
-#     patientData=pd.read_excel(args.patientData,usecols=[args.labelColumns,args.IDColumn],index_col=None,converters={args.IDColumn:str})
-#     patientMetrics={}
-#     assert args.labelColumns in ['Age','Cr','Sex'], 'Label column must be Age, Cr, or Sex for standard scatter'
-#     if args.labelColumns=='Age':
-#         labelBins=[0,10,20,30,40,50,60,70,80,90,100]
-#     elif args.labelColumns=='Cr':
-#         labelBins=[0,.5,.6,.7,.8,.9,1,1.1,1.2,1.3,1.4,1.5,1.6,1.7,1.8,1.9,2]
-#     elif args.labelColumns=='Sex':
-#         labelBins=None
-
-#     for idx,patientID in enumerate(patientData[args.IDColumn]):
-#         patientMetrics[patientID]=patientData[args.labelColumns][idx]
-
-#     datafiles=glob.glob(os.path.join(args.target, "*.xlsx"))
-#     clinical_legend=[]
-#     for datafile in datafiles:
-#         patientID=os.path.splitext(datafile.split('/')[-1])[0]
-#         clinical_legend.append(str(patientMetrics[patientID]))
-
-#     sortedPatientOrder=[x for  _, x in sorted(zip(clinical_legend,datafiles))]
-#     sortedPatientLegend=[x for x,_ in sorted(zip(clinical_legend,datafiles))]
-#     print(sortedPatientLegend)
-#     f1,f2=[int(i) for i in args.scatterFeatures.split(',')]
-#     # f1=5
-#     # f2=7
-
-#     temp=pd.read_excel(datafiles[0],sheet_name='Summary',header=None,index_row=None,index_col=0)
-#     index = temp.index
-#     xlabel=index[f1-1]
-#     ylabel=index[f2-1]
-
-#     popIdx=[]
-#     scatter_features=[]
-#     for idx,datafile in enumerate(tqdm(sortedPatientOrder,colour='red')):
-#         features=np.array(pd.read_excel(datafile,sheet_name='Summary',header=None,index_row=None,index_col=0))
-#         # print(np.array(features))
-#         if not np.isnan(features[f1-1]) and not np.isnan(features[f2-1]):
-#             scatter_features.append([features[f1-1][0],features[f2-1][0]])
-#         else:
-#             popIdx.append(idx)
-#     for p in popIdx[::-1]:
-#         sortedPatientLegend.pop(p)
-#     sortedPatientLegend=np.array(sortedPatientLegend)
-
-#     scatter_features=np.array(scatter_features)
-
-#     sns.scatterplot(x=scatter_features[:,0],y=scatter_features[:,1],hue=sortedPatientLegend,palette='viridis')
-#     plt.xlabel(xlabel)
-#     plt.ylabel(ylabel)
-#     plt.legend(sortedPatientLegend,title=args.labelColumns)
-#     plt.show()
-
-# def BLDensity(args):
-#     patientData=pd.read_excel(args.patientData,usecols=[args.labelColumns,args.IDColumn],index_col=None)
-#     patientMetrics={}
-#     for idx,patientID in enumerate(patientData[args.IDColumn]):
-#         patientMetrics[patientID]=patientData[args.labelColumns][idx]
-
-#     datafiles=glob.glob(os.path.join(args.target, "*.xlsx"))
-#     clinical_legend=[]
-#     for datafile in datafiles:
-#         patientID=os.path.splitext(datafile.split('/')[-1])[0]
-#         clinical_legend.append(str(patientMetrics[patientID]))
-
-#     sortedPatientOrder=[x for  _, x in sorted(zip(clinical_legend,datafiles))]
-#     sortedPatientLegend=[x for x,_ in sorted(zip(clinical_legend,datafiles))]
-
-#     fig,ax=plt.subplots()
-#     plt.xlabel('Cortical tubular diameter (µm)')
-#     plasma = cm.get_cmap('plasma',len(sortedPatientOrder))
-#     popIdx=[]
-#     for idx,datafile in enumerate(tqdm(sortedPatientOrder)):
-#         tubule_features=pd.read_excel(datafile,sheet_name='Tubules',usecols=['Cortical radii','Cortical areas'],index_col=None).dropna()
-#         if len(tubule_features['Cortical radii'])>0:
-#             # xl1=np.percentile(tubule_features['Cortical radii']*0.25,0.01)
-#             xl2=np.percentile(tubule_features['Cortical radii']*0.25,99)
-#             # yl1=np.percentile(tubule_features['Cortical areas']*0.25*0.25,0.01)
-#             yl2=np.percentile(tubule_features['Cortical areas']*0.25*0.25,99)
-#             # sns.kdeplot(tubule_features['Cortical radii']*0.25,ax=ax,clip=[l1,l2],bw_adjust=0.75,color=plasma(idx),fill=args.plotFill)
-#             sns.kdeplot(x=tubule_features['Cortical radii']*0.25,y=tubule_features['Cortical areas']*0.25*0.25,
-#                 color=plasma(idx),ax=ax,clip=[[None,xl2],[None,yl2]])
-#         else:
-#             popIdx.append(idx)
-#     for p in popIdx[::-1]:
-#         sortedPatientLegend.pop(p)
-#     plt.legend(sortedPatientLegend,title=args.labelColumns)
-#     plt.show()
-
-# def ULDensity(args):
-
-#     if args.labelModality=='Continuous':
-#         patientData=pd.read_excel(args.patientData,usecols=[args.labelColumns,args.IDColumn],index_col=None,converters={args.IDColumn:str})
-#         patientMetrics={}
-#         # print(patientData)
-#         for idx,patientID in enumerate(patientData[args.IDColumn]):
-#             patientMetrics[patientID]=patientData[args.labelColumns][idx]
-
-#         datafiles=glob.glob(os.path.join(args.target, "*.xlsx"))
-#         clinical_legend=[]
-#         for datafile in datafiles:
-#             patientID=os.path.splitext(datafile.split('/')[-1])[0]
-#             clinical_legend.append(str(patientMetrics[patientID]))
-
-#         sortedPatientOrder=[x for  _, x in sorted(zip(clinical_legend,datafiles))]
-#         sortedPatientLegend=[x for x,_ in sorted(zip(clinical_legend,datafiles))]
-
-#         fig,ax=plt.subplots()
-#         plt.xlabel('Cortical tubular diameter (µm)')
-#         plasma = cm.get_cmap('plasma',len(sortedPatientOrder))
-#         popIdx=[]
-#         all_tubules=[]
-#         featurename='Cortical radii'
-#         sheetname='Tubules'
-#         for idx,datafile in enumerate(tqdm(sortedPatientOrder,colour='red')):
-#             tubule_features=pd.read_excel(datafile,sheet_name=sheetname,usecols=[featurename],index_col=None).dropna()
-#             if len(tubule_features[featurename])>0:
-#                 l1=np.percentile(tubule_features[featurename]*0.25,0.05)
-#                 l2=np.percentile(tubule_features[featurename]*0.25,99.5)
-#                 sns.kdeplot(tubule_features[featurename]*0.25,ax=ax,clip=[l1,l2],bw_adjust=0.75,color=plasma(idx),fill=args.plotFill,alpha=0.1)
-#                 # sns.kdeplot(tubule_features[featurename]*0.25,ax=ax,bw_adjust=0.75,color=plasma(idx),fill=args.plotFill,alpha=0.1)
-#                 all_tubules.extend(np.array(tubule_features[featurename]*0.25))
-#             else:
-#                 popIdx.append(idx)
-#         for p in popIdx[::-1]:
-#             sortedPatientLegend.pop(p)
-
-#         plt.legend(sortedPatientLegend,title=args.labelColumns)
-#         plt.title('Cumulative distributions per patient')
-#         # plt.colorbar()
-#         plt.show()
-#         # print(len(all_tubules))
-#         # fig,ax=plt.subplots()
-#         # plt.xlabel('Cortical tubular diameter (µm)')
-#         # sns.kdeplot(all_tubules,ax=ax,bw_adjust=0.75,fill=args.plotFill)
-#         # plt.title('Cumulative distribution for dataset')
-#         # plt.show()
-#     elif args.labelModality=='Categorical':
-#         patientData=pd.read_excel(args.patientData,usecols=[args.labelColumns,args.IDColumn],index_col=None,converters={args.IDColumn:str})
-#         patientMetrics={}
-#         for idx,patientID in enumerate(patientData[args.IDColumn]):
-#             patientMetrics[patientID]=patientData[args.labelColumns][idx]
-
-#         datafiles=glob.glob(os.path.join(args.target, "*.xlsx"))
-#         clinical_legend=[]
-#         for datafile in datafiles:
-#             patientID=os.path.splitext(datafile.split('/')[-1])[0]
-
-#             clinical_legend.append(str(patientMetrics[patientID]))
-
-#         fig,ax=plt.subplots()
-#         plt.xlabel('Cortical tubular diameter (µm)')
-#         plasma = cm.get_cmap('plasma',len(np.unique(clinical_legend))+1)
-#         labelMapper={}
-#         categories=np.unique(clinical_legend)
-#         for idx,l in enumerate(categories):
-#             labelMapper[l]=idx
-#         popIdx=[]
-#         all_tubules=[]
-#         featurename='Radius'
-#         sheetname='Glomeruli'
-#         for idx,datafile in enumerate(tqdm(datafiles,colour='red')):
-#             tubule_features=pd.read_excel(datafile,sheet_name=sheetname,usecols=[featurename],index_col=None).dropna()
-#             if len(tubule_features[featurename])>0:
-#                 l1=np.percentile(tubule_features[featurename]*0.25,0.01)
-#                 l2=np.percentile(tubule_features[featurename]*0.25,99.9)
-
-#                 pcolor=plasma(labelMapper[clinical_legend[idx]])
-#                 # sns.kdeplot(tubule_features[featurename]*0.25,ax=ax,clip=[l1,l2],bw_adjust=0.75,color=pcolor,fill=args.plotFill,alpha=0.5)
-#                 sns.kdeplot(tubule_features[featurename]*0.25,ax=ax,bw_adjust=0.75,color=pcolor,fill=args.plotFill,alpha=0.5)
-
-#                 all_tubules.extend(np.array(tubule_features[featurename]*0.25))
-#             else:
-#                 popIdx.append(idx)
-#         for p in popIdx[::-1]:
-#             clinical_legend.pop(p)
-#         plt.legend(clinical_legend,title=args.labelColumns)
-#         plt.title('Cumulative distributions per patient')
-#         plt.show()
-#         # fig,ax=plt.subplots()
-#         # plt.xlabel('Cortical tubular diameter (µm)')
-#         # sns.kdeplot(all_tubules,ax=ax,bw_adjust=0.75,fill=args.plotFill)
-#         # plt.title('Cumulative distribution for dataset')
-#         # plt.show()
-
-
-# def JoyPlot(args):
-
-#     url = "https://gist.githubusercontent.com/borgar/31c1e476b8e92a11d7e9/raw/0fae97dab6830ecee185a63c1cee0008f6778ff6/pulsar.csv"
-#     df = pd.read_csv(url, header=None)
-#     df = df.stack().reset_index()
-#     df.columns = ['idx', 'x', 'y']
-
-#     patientData=pd.read_excel(args.patientData,usecols=[args.labelColumns,args.IDColumn],index_col=None,converters={args.IDColumn:str})
-#     patientMetrics={}
-#     for idx,patientID in enumerate(patientData[args.IDColumn]):
-#         patientMetrics[patientID]=patientData[args.labelColumns][idx]
-#     datafiles=glob.glob(os.path.join(args.target, "*.xlsx"))
-#     clinical_legend=[]
-#     for datafile in datafiles:
-#         patientID=os.path.splitext(datafile.split('/')[-1])[0]
-#         clinical_legend.append(str(patientMetrics[patientID]))
-
-#     sortedPatientOrder=[x for  _, x in sorted(zip(clinical_legend,datafiles))]
-#     sortedPatientLegend=[x for x,_ in sorted(zip(clinical_legend,datafiles))]
-
-#     popIdx=[]
-#     all_tubules=[]
-#     # outDF=pd.DataFrame()
-
-#     for idx,datafile in enumerate(tqdm(sortedPatientOrder[:15],colour='red')):
-
-#         tubule_features=pd.read_excel(datafile,sheet_name='Tubules',usecols=['Cortical radii'],index_col=None).dropna()
-#         if len(tubule_features['Cortical radii'])>0:
-#             #.values()
-#             feature_array=np.array(tubule_features['Cortical radii']*0.25)
-#             all_tubules.append(feature_array)
-
-#             l1=np.percentile(feature_array,0.05)
-#             l2=np.percentile(feature_array,99.5)
-#             # sns.kdeplot(tubule_features['Cortical radii']*0.25,ax=ax,clip=[l1,l2],bw_adjust=0.75,color=plasma(idx),fill=args.plotFill,cbar=True)
-#             # all_tubules.extend(np.array(tubule_features['Cortical radii']*0.25))
-
-#         else:
-#             popIdx.append(idx)
-#     for p in popIdx[::-1]:
-#         sortedPatientLegend.pop(p)
-#     outDF=pd.DataFrame(all_tubules)
-
-#     outDF=outDF.stack(dropna=False).reset_index().dropna()
-
-#     # outDFT=outDF.transpose()
-#     # input(outDF)
-#     # input(outDF.reset_index())
-#     # input(outDF.reset_index(drop=True)[::2].reset_index(drop=True))
-#     # input(outDF.reset_index(drop=True))
-#     # input(outDF.stack())
-#     # input(outDF.reset_index().stack())
-#     # input(outDF.reset_index(drop=True).stack())
-#     # outDF=outDF.reset_index(drop=True)[::2].reset_index(drop=True)
-#     # outDF = outDF.stack().reset_index()
-#     outDF.columns = ['idx', 'x', 'y']
-#     outDF.to_csv('test.csv')
-#     # print(outDF.dropna())
-#     # exit()
-
-
-
-
-#     sns.set_theme(rc={"axes.facecolor": (0, 0, 0,0), 'figure.facecolor':'#ffffff', 'axes.grid':False})
-#     g = sns.FacetGrid(outDF, row='idx',hue="idx", aspect=15)
-#     g.map(sns.kdeplot, "x",
-#           bw_adjust=.9, clip_on=False,
-#           fill=True, alpha=1, linewidth=1.5)
-#     g.map(sns.kdeplot, "x", clip_on=False, color="w", lw=2, bw_adjust=.9)
-#     g.refline(y=0, linewidth=2, linestyle="-", color=None, clip_on=False)
-#     def label(x, color, label):
-#         ax = plt.gca()
-#         ax.text(0, .2, label, fontweight="bold", color=color,
-#                 ha="left", va="center", transform=ax.transAxes)
-#     g.map(label, "x")
-
-#     # Draw the densities in a few steps
-#     # g.map(sns.lineplot, 'x', 'y', clip_on=False, alpha=1, linewidth=1.5)
-#     # g.map(plt.fill_between, 'x', 'y', color='#000000')
-#     # g.map(sns.lineplot, 'x', 'y', clip_on=False, color='#ffffff', lw=2)
-#     # Set the subplots to overlap
-#     g.fig.subplots_adjust(hspace=-0.95)
-#     g.set_titles("")
-#     g.set(yticks=[], xticks=[], ylabel="", xlabel="")
-#     g.despine(bottom=True, left=True)
-#     plt.show()
-#     # plt.savefig('joy.png', facecolor='#000000')
-
-# def aggregate(args):
-#     assert args.exceloutfile is not None, 'You must provide a name of xlsx output file for feature aggregation with --exceloutfile name.xlsx'
-#     usecols=args.labelColumns.split(',')
-#     # index_col=int(args.IDColumn)
-#     patientData=pd.read_excel(args.patientData,usecols=usecols.extend(args.IDColumn),index_col=args.IDColumn)
-#     patientData = patientData.loc[:, ~patientData.columns.str.contains('^Unnamed')]
-#     patientMetrics={}
-
-#     pd.set_option('display.max_rows', 100)
-#     patientData.index = patientData.index.map(str)
-
-#     datafiles=glob.glob(os.path.join(args.target, "*.xlsx"))
-#     # numGloms=0
-#     # numSGloms=0
-#     # numTubules=0
-#     # numArts=0
-#     full_data={}
-#     for idx,datafile in enumerate(tqdm(datafiles,colour='red')):
-
-#         xlsxid=datafile.split('/')[-1].split('.xlsx')[0]
-#         tubule_features=pd.read_excel(datafile,sheet_name='Summary',header=None,index_col=None).transpose()
-#         names=np.array(tubule_features.iloc[0])
-#         vals=np.array(tubule_features.iloc[1])
-#         # numGloms+=vals[0]
-#         # if not np.isnan(vals[5]):
-#         #     numSGloms+=vals[5]
-#         # numTubules+=vals[10]
-#         # numArts+=vals[19]
-
-#         full_data[xlsxid]=np.append(vals,np.array(patientData.loc[xlsxid]),0)
-#     # print(numGloms)
-#     # print(numSGloms)
-#     # print(numTubules)
-#     # print(numArts)
-#     # exit()
-#     workbook=xlsxwriter.Workbook(args.exceloutfile,{'nan_inf_to_errors': True})
-#     worksheet1 = workbook.add_worksheet('Aggregation')
-
-#     outcolnames=np.append(names,patientData.columns,0)
-#     outrownames=full_data.keys()
-#     for idx,outcol in enumerate(outcolnames):
-#         worksheet1.write(0,idx+1,outcol)
-
-#     rowcounter=1
-#     for key,vals in full_data.items():
-#         worksheet1.write(rowcounter,0,key)
-#         for idx,val in enumerate(vals):
-#             worksheet1.write(rowcounter,idx+1,val)
-#         rowcounter+=1
-
-#     workbook.close()
 def points_to_features_glom(points,args,min_size,cortex,medulla):
     a=cv2.contourArea(points)
     if a>min_size:

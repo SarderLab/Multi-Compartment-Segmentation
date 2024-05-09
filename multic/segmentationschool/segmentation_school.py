@@ -121,8 +121,8 @@ if __name__ == '__main__':
         help='girderApiUrl')
     parser.add_argument('--girderToken', dest='girderToken', default=' ' ,type=str,
         help='girderToken')
-    parser.add_argument('--files', dest='files', default=' ' ,type=str,
-        help='files')
+    parser.add_argument('--file', dest='file', default=' ' ,type=str,
+        help='input WSI file name')
     # option
     parser.add_argument('--option', dest='option', default=' ' ,type=str,
         help='option for [new, train, predict, validate]')
@@ -165,7 +165,7 @@ if __name__ == '__main__':
 
     # automatically generated
     parser.add_argument('--base_dir', dest='base_dir', default=os.getcwd(),type=str,
-        help='base directory of code folder')
+        help='base directory of Data folder')
 
     parser.add_argument('--code_dir', dest='code_dir', default=os.getcwd(),type=str,
         help='base directory of code folder')
@@ -289,6 +289,9 @@ if __name__ == '__main__':
 
     parser.add_argument('--platform', dest='platform', default='DSA' ,type=str,
         help='Run Platform, HPG or DSA')
+
+    parser.add_argument('--item_id', dest='item_id', default=' ' , type=str,
+        help='item id of the WSI in DSA')
 
 
 

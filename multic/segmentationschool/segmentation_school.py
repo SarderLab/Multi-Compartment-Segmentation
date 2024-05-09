@@ -135,7 +135,7 @@ if __name__ == '__main__':
     parser.add_argument('--cortextarget', dest='cortextarget', default=None,type=str,
         help='directory with cortex annotations for splicing')
     parser.add_argument('--output_dir', dest='output_dir', default=None,type=str,
-        help='directory to save output transformed XMLs')
+        help='directory to save output excel file')
     parser.add_argument('--wsis', dest='wsis', default=None,type=str,
         help='directory of WSIs for reference feature extraction')
     parser.add_argument('--groupBy', dest='groupBy', default=None,type=str,

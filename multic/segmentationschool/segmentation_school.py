@@ -47,7 +47,7 @@ def str2bool(v):
 def main(args):
 
     from segmentationschool.Codes.InitializeFolderStructure import initFolder, purge_training_set, prune_training_set
-    # from extract_reference_features import getKidneyReferenceFeatures,summarizeKidneyReferenceFeatures
+    from segmentationschool.Codes.extract_reference_features import getKidneyReferenceFeatures
     # from TransformXMLs import splice_cortex_XMLs,register_aperio_scn_xmls
     # from randomCropGenerator import randomCropGenerator
     if args.one_network == True:
@@ -121,8 +121,8 @@ if __name__ == '__main__':
         help='girderApiUrl')
     parser.add_argument('--girderToken', dest='girderToken', default=' ' ,type=str,
         help='girderToken')
-    parser.add_argument('--files', dest='files', default=' ' ,type=str,
-        help='files')
+    parser.add_argument('--file', dest='file', default=' ' ,type=str,
+        help='input WSI file name')
     # option
     parser.add_argument('--option', dest='option', default=' ' ,type=str,
         help='option for [new, train, predict, validate]')
@@ -134,8 +134,8 @@ if __name__ == '__main__':
         help='directory with xml transformation targets')
     parser.add_argument('--cortextarget', dest='cortextarget', default=None,type=str,
         help='directory with cortex annotations for splicing')
-    parser.add_argument('--output', dest='output', default=None,type=str,
-        help='directory to save output transformed XMLs')
+    parser.add_argument('--output_dir', dest='output_dir', default=None,type=str,
+        help='directory to save output excel file')
     parser.add_argument('--wsis', dest='wsis', default=None,type=str,
         help='directory of WSIs for reference feature extraction')
     parser.add_argument('--groupBy', dest='groupBy', default=None,type=str,
@@ -165,7 +165,7 @@ if __name__ == '__main__':
 
     # automatically generated
     parser.add_argument('--base_dir', dest='base_dir', default=os.getcwd(),type=str,
-        help='base directory of code folder')
+        help='base directory of Data folder')
 
     parser.add_argument('--code_dir', dest='code_dir', default=os.getcwd(),type=str,
         help='base directory of code folder')
@@ -280,6 +280,18 @@ if __name__ == '__main__':
         help='padded region for low resolution region extraction')
     parser.add_argument('--show_interstitium', dest='show_interstitium', default=True ,type=str2bool,
         help='padded region for low resolution region extraction')
+    
+    parser.add_argument('--xml_path', dest='xml_path', default=' ' ,type=str,
+        help='path to xml file')
+
+    parser.add_argument('--ext', dest='ext', default='.svs' ,type=str,
+        help='file extention')
+
+    parser.add_argument('--platform', dest='platform', default='DSA' ,type=str,
+        help='Run Platform, HPG or DSA')
+
+    parser.add_argument('--item_id', dest='item_id', default=' ' , type=str,
+        help='item id of the WSI in DSA')
 
 
 

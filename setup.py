@@ -78,6 +78,7 @@ setup(
         'girder-client',
         # cli
         'ctk-cli',
+        'XlsxWriter'
     ],
     license='Apache Software License 2.0',
     keywords='multic',

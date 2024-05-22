@@ -5,31 +5,26 @@ from skimage import exposure
 from skimage.morphology import remove_small_objects,binary_erosion,binary_dilation,disk,binary_opening,binary_closing
 from skimage.filters import threshold_otsu
 from skimage import measure
-
+import cv2
 from .extract_ffpe_features import imreconstruct
 from .PAS_deconvolution import deconvolution
 
-GLOM_DICT = {3:'Glomeruli',4:'Sclerotic Glomeruli'}
 
-def process_glom_features(mask_xml, glom_value, MOD, slide, mpp, h_threshold, saturation_threshold):
-
-    glomeruli = mask_xml == glom_value
-    glomeruli = glomeruli.astype(np.uint8)
-    glomeruli = measure.label(glomeruli)
-    glomeruli_unique_max = np.max(glomeruli)
-    gloms = np.zeros((glomeruli_unique_max,7))
-    props = measure.regionprops(glomeruli)
-
-    for i in tqdm(range(glomeruli_unique_max),desc=GLOM_DICT[glom_value]):
-        #Area, Cellularity, Mesangial Area to Cellularity Ratio
-        area = (props[i].area)*(mpp**2)
-        x1,y1,x2,y2 = props[i].bbox
+def process_glom_features(points, MOD, slide, h_threshold, saturation_threshold):
+    
+    #Area, Cellularity, Mesangial Area to Cellularity Ratio
+    area = cv2.contourArea(points)
+    if area>0:
+        y1, y2, x1, x2 =[np.min(points[:,0]),np.max(points[:,0]),np.min(points[:,1]),np.max(points[:,1])]
 
         crop = slide.read_region((y1,x1),0,(y2-y1,x2-x1))
         crop = np.array(crop)
         crop = crop[:,:,:3]
 
-        mask = (glomeruli[x1:x2,y1:y2] == i+1).astype(np.uint8)
+        mask = np.zeros((x2-x1,y2-y1),dtype=np.uint8)
+        points[:,0]-=y1
+        points[:,1]-=x1
+        mask=cv2.fillPoly(mask,[points],1)
 
         hsv = rgb2hsv(crop)
         hsv = hsv[:,:,1]
@@ -51,41 +46,24 @@ def process_glom_features(mask_xml, glom_value, MOD, slide, mpp, h_threshold, sa
         mask_pixels = np.sum(mask)
         pas_pixels = np.sum(pas_seg)
 
-        mes_fraction = (pas_pixels*(mpp**2)) / area
+        mes_fraction = (pas_pixels) / area
 
-        gloms[i,0] = x1
-        gloms[i,1] = x2
-        gloms[i,2] = y1
-        gloms[i,3] = y2
-        gloms[i,4] = area
-        gloms[i,5] = pas_pixels*(mpp**2)
-        gloms[i,6] = mes_fraction
-    
-    del glomeruli
+        return [x1,x2,y1,y2, area, pas_pixels, mes_fraction]
 
-    return gloms
+def process_tubules_features(points, MOD, slide, whitespace_threshold):
 
-def process_tubules_features(mask_xml, tub_value, MOD, slide, mpp, whitespace_threshold):
-
-    tubules = mask_xml == tub_value
-    tubules = tubules.astype(np.uint8)
-    tubules = measure.label(tubules)
-    tubules_unique_max = np.max(tubules)
-    tubs = np.zeros((tubules_unique_max,7))
-    props = measure.regionprops(tubules)
-
-    for i in tqdm(range(tubules_unique_max),desc='Tubules'):
-        #Area, Cellularity, Mesangial Area to Cellularity Ratio
-        # i=2615
-        area = (props[i].area)*(mpp**2)
-        x1,y1,x2,y2 = props[i].bbox
-
+    area = cv2.contourArea(points)
+    if area>0:
+        y1, y2, x1, x2 =[np.min(points[:,0]),np.max(points[:,0]),np.min(points[:,1]),np.max(points[:,1])]
 
         crop = slide.read_region((y1,x1),0,(y2-y1,x2-x1))
         crop = np.array(crop)
         crop = crop[:,:,:3]
 
-        mask = (tubules[x1:x2,y1:y2] == i+1).astype(np.uint8)
+        mask = np.zeros((x2-x1,y2-y1),dtype=np.uint8)
+        points[:,0]-=y1
+        points[:,1]-=x1
+        mask=cv2.fillPoly(mask,[points],1)
 
         lab = rgb2lab(crop)
         lab = lab[:,:,0]
@@ -156,38 +134,12 @@ def process_tubules_features(mask_xml, tub_value, MOD, slide, mpp, whitespace_th
         area_tot = np.sum(np.array(cyto_areas))
         cyto_avg = np.sum(np.multiply(np.array(cyto_thicknesses),(np.array(cyto_areas)/area_tot)))
         
-        tubs[i,0] = x1
-        tubs[i,1] = x2
-        tubs[i,2] = y1
-        tubs[i,3] = y2
-        tubs[i,4] = tbm_avg*(mpp**2)
-        tubs[i,5] = cyto_avg*(mpp**2)
-        tubs[i,6] = np.sum(WS) / np.sum(mask)#
-
-    del tubules
-
-    return tubs
+        return [x1,x2,y1,y2,tbm_avg,cyto_avg,np.sum(WS) / np.sum(mask)]
 
 
-def process_arteriol_features(mask_xml, art_value, mpp):
+def process_arteriol_features(points):
 
-    arteries = mask_xml == art_value
-    arteries = arteries.astype(np.uint8)
-    arteries = measure.label(arteries)
-    arts_unique_max = np.max(arteries)
-    arts = np.zeros((arts_unique_max,5))
-    props = measure.regionprops(arteries)
-
-    for i in tqdm(range(arts_unique_max),desc='Arteries'):
-        area = (props[i].area)*(mpp**2)
-        x1,y1,x2,y2 = props[i].bbox
-
-        arts[i,0] = x1
-        arts[i,1] = x2
-        arts[i,2] = y1
-        arts[i,3] = y2
-        arts[i,4] = area
-
-    del arteries
-
-    return arts
+    area = cv2.contourArea(points)
+    if area>0:
+        y1, y2, x1, x2 =[np.min(points[:,0]),np.max(points[:,0]),np.min(points[:,1]),np.max(points[:,1])]
+        return [x1,x2,y1,y2,area]

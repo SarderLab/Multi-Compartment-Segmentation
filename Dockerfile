@@ -118,7 +118,7 @@ RUN apt-get update && \
 COPY . $mc_path/
 WORKDIR $mc_path
 
-RUN pip install --no-cache-dir --upgrade --ignore-installed pip setuptools && \
+RUN pip install --no-cache-dir --upgrade --ignore-installed pip setuptools==69.5.1 && \
     pip install --no-cache-dir .  && \
     pip install --no-cache-dir tensorboard cmake onnx && \
     pip install --no-cache-dir torch==1.10  torchaudio==0.10 torchvision==0.11.1 -f https://download.pytorch.org/whl/cu111/torch_stable.html && \
@@ -133,7 +133,5 @@ WORKDIR $mc_path/multic/cli
 # openslide, one of these will fail
 RUN python -m slicer_cli_web.cli_list_entrypoint --list_cli
 RUN python -m slicer_cli_web.cli_list_entrypoint MultiCompartmentSegment --help
-RUN python -m slicer_cli_web.cli_list_entrypoint FeatureExtraction --help
-
 
 ENTRYPOINT ["/bin/bash", "docker-entrypoint.sh"]

@@ -1,8 +1,5 @@
 {
   "MultiCompartmentSegment": {
     "type"    : "python"
-  },
-  "FeatureExtraction": {
-    "type"    : "python"
   }
 }

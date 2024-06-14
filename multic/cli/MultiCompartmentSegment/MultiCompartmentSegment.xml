@@ -11,26 +11,19 @@
   <parameters>
     <label>IO</label>
     <description>Input/output parameters</description>
-    <image>
-      <name>files</name>
-      <label>files</label>
+    <image reference="_girder_id_">
+      <name>input_file</name>
+      <label>input file</label>
       <description>input file</description>
       <channel>input</channel>
       <index>0</index>
     </image>
-    <directory>
-      <name>base_dir</name>
-      <label>Base Directory</label>
-      <description>Base Directory for the model</description>
-      <channel>input</channel>
-      <index>1</index>
-    </directory>
     <file>
       <name>modelfile</name>
       <label>Model File</label>
       <description> Trained model file</description>
       <channel>input</channel>
-      <index>2</index>
+      <index>1</index>
     </file>
   </parameters>
   <parameters advanced="true">

@@ -58,7 +58,7 @@ setup(
         'termcolor',
         # 'seaborn',
         'opencv-python',
-        'openslide-python',
+
         'scikit-image>=0.19.2',
         # 'scikit-learn==1.0.2',
         'lxml==4.8.0',

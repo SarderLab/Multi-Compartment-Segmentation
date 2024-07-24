@@ -1,4 +1,5 @@
 import cv2
+from multic.segmentationschool.Codes.upload_assetstore_files import uploadFilesToOriginalFolder
 import numpy as np
 import os
 import json
@@ -239,9 +240,15 @@ def xml_suey(wsiMask, args, classNum, downsample,glob_offset):
             Annotations = xml_add_region(Annotations=Annotations, pointList=pointList, annotationID=value)
     gc = args.gc
     annots = convert_xml_json(Annotations, NAMES)
+    output_files = []
     for annot in annots:
         _ = gc.post(path='annotation',parameters={'itemId':args.item_id}, data = json.dumps(annot))
-        print('uploating layers')
+        output_filename = json.dump(annot['name']).replace('"','') + '.json'
+        output_files.append(output_filename)
+        print('uploading layers')
+    print('output files: ', output_files)
+    # upload files to original user folder
+    uploadFilesToOriginalFolder(gc, output_files, args.item_id, 'MultiCompartment_Segmentation', args.girderApiUrl)
     print('annotation uploaded...\n')
 
 def get_contour_points(mask, args, downsample,value, offset={'X': 0,'Y': 0}):

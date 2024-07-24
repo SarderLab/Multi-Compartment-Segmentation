@@ -38,6 +38,9 @@ def createWorkPath(gc, slideItemId, pluginName, girderApiUrl):
         if importPathDirectory is None:
             print('No import path directory found')
             return
+        elif os.path.isfile(importPathDirectory): 
+            print('Import path directory is a file')
+            importPathDirectory = os.path.dirname(importPathDirectory)
         time_now = datetime.now().astimezone()
         time_stamp = time_now.strftime("%m_%d_%Y__%H:%M:%S")
         getItemName = gc.getItem(slideItemId).get('name').split('.')[0]

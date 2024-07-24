@@ -128,7 +128,7 @@ RUN pip install --no-cache-dir --upgrade --ignore-installed pip setuptools==69.5
 RUN python --version && pip --version && pip freeze
 
 WORKDIR $mc_path/multic/cli
-
+LABEL entry_path=$mc_path/multic/cli
 # Test our entrypoint.  If we have incompatible versions of numpy and
 # openslide, one of these will fail
 RUN python -m slicer_cli_web.cli_list_entrypoint --list_cli

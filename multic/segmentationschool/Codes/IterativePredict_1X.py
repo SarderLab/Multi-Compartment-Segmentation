@@ -244,7 +244,7 @@ def xml_suey(wsiMask, args, classNum, downsample,glob_offset):
     for annot in annots:
         _ = gc.post(path='annotation',parameters={'itemId':args.item_id}, data = json.dumps(annot))
         print('uploading layers')
-        output_filename = annot['annotation']['name'].replace("/", "_")
+        output_filename = annot['name'].replace("/", "_")
         file_path = os.path.join(os.getcwd(), output_filename + '.json')
         with open (file_path,'w') as f:
             json.dump(annot,f)

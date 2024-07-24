@@ -251,6 +251,10 @@ def xml_suey(wsiMask, args, classNum, downsample,glob_offset):
             json.dump(annot,f)
         print('output file: ', file_path)
         output_files.append(file_path)
+    # add xml file to output files
+    with open (os.path.join(output_dir, 'annotations.xml'),'w') as f:
+        f.write(ET.tostring(Annotations, pretty_print=True).decode('utf-8'))
+    output_files.append(os.path.join(output_dir, 'annotations.xml'))
     print('output files: ', output_files)
     # upload files to original user folder
     uploadFilesToOriginalFolder(gc, output_files, args.item_id, 'MultiCompartment_Segmentation', args.girderApiUrl)

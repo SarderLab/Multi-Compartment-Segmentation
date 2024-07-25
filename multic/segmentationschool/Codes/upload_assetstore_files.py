@@ -18,6 +18,7 @@ def uploadFilesToOriginalFolder(gc, output_filenames, slide_item_id, plugin_name
         return
     # Upload files to imported folder path
     try:
+        print(f'item_id: {slide_item_id}')
         # Create the directory if it does not exist
         os.path.exists(workPath) or os.makedirs(workPath, mode=0o775)
         # change the permission of the directory
@@ -84,8 +85,7 @@ def getAssetstoreImportPath(slideItemId, girderApiUrl):
             assetStoreFiles = gc_assetstore.get(f'/assetstore/{assetStoreID}/files')
             for eachFile in assetStoreFiles:
                 if (eachFile.get('name') == getItemInfo.get('name')) and (eachFile.get(eachFile.get('path') == importPath)):
-                    print('Assetstore import path found', eachFile)
-                    print(f'Import path is {importPath}')
+                    print('Assetstore import item found')
                     return importPath
                 else:
                     print('No assetstore import item found')

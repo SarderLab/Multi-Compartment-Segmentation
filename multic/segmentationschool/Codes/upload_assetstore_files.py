@@ -83,7 +83,7 @@ def getAssetstoreImportPath(slideItemId, girderApiUrl):
         else:
             assetStoreFiles = gc_assetstore.get(f'/assetstore/{assetStoreID}/files')
             for eachFile in assetStoreFiles:
-                if (eachFile.get('itemId') == slideItemId):
+                if (eachFile.get('name') == getItemInfo.get('name')) and (eachFile.get(eachFile.get('path') == importPath)):
                     print('Assetstore import path found', eachFile)
                     print(f'Import path is {importPath}')
                     return importPath

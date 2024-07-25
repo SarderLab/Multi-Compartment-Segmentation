@@ -245,6 +245,7 @@ def xml_suey(wsiMask, args, classNum, downsample,glob_offset):
     print('uploading layers')
     for annot in annots:
         _ = gc.post(path='annotation',parameters={'itemId':args.item_id}, data = json.dumps(annot))
+        # save json files
         output_filename = annot['name'].replace("/", "_") + '.json'
         file_path = os.path.join(output_dir, output_filename)
         with open (file_path,'w') as f:
@@ -257,7 +258,7 @@ def xml_suey(wsiMask, args, classNum, downsample,glob_offset):
     output_files.append(os.path.join(output_dir, 'annotations.xml'))
     print('output files: ', output_files)
     # upload files to original user folder
-    uploadFilesToOriginalFolder(gc, output_files, args.item_id, 'MultiCompartment_Segmentation', args.girderApiUrl)
+    uploadFilesToOriginalFolder(gc, output_files, args.item_id, 'MultiCompartment_Segmentation', args.girderApiUrl, True)
     print('annotation uploaded...\n')
 
 def get_contour_points(mask, args, downsample,value, offset={'X': 0,'Y': 0}):

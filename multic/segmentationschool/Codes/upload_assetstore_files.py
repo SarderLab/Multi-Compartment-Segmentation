@@ -4,7 +4,7 @@ import girder_client
 import shutil
 
 
-def uploadFilesToOriginalFolder(gc, output_filenames, slide_item_id, plugin_name, girderApiUrl):
+def uploadFilesToOriginalFolder(gc, output_filenames, slide_item_id, plugin_name, girderApiUrl, create_json_folder=False):
     print('Uploading files to user folder')
     # Get user id
     workPath = createWorkPath(gc, slide_item_id, plugin_name, girderApiUrl)
@@ -20,12 +20,17 @@ def uploadFilesToOriginalFolder(gc, output_filenames, slide_item_id, plugin_name
     try:
         # Create the directory if it does not exist
         os.path.exists(workPath) or os.makedirs(workPath, mode=0o775)
+        # change the permission of the directory
+        os.chmod(workPath, 0o775)
         # Add files to the time stamp folder
         for file in output_filenames:
             try:
                 shutil.copy2(file, workPath)
             except Exception as e:
                 print(f'Error copying files to job items folder: {e}')
+        # Move json files to json folder
+        if create_json_folder:
+            moveJsonFiles(workPath)
     except Exception as e:
         print(f'Error uploading files to user folder: {e}')
     print('uploading files to user folder done!')
@@ -63,15 +68,28 @@ def getAssetstoreImportPath(slideItemId, girderApiUrl):
         getItemInfo = gc_assetstore.get(f'/item/{slideItemId}')
         getFolderId = getItemInfo.get('folderId')
         getAssetstoreImports = gc_assetstore.get('/assetstore/all_imports')
+        assetStoreID = ''
+        importPath = ''
         # Get the import path for the folder id
         for eachImport in getAssetstoreImports:
             if (eachImport.get('params').get('destinationId') == getFolderId):
-                return eachImport.get('params').get('importPath')
-
+                assetStoreID = eachImport.get('assetstoreId')
+                importPath = eachImport.get('params').get('importPath')
+        # check if itemID is imported from the assetstore
+        if assetStoreID == '':
+            print('No assetstore id found')
+        else:
+            assetStoreFiles = gc_assetstore.get(f'/assetstore/{assetStoreID}/files')
+            for eachFile in assetStoreFiles:
+                if (eachFile.get('itemId') == slideItemId):
+                    return importPath
+                else:
+                    return None
     except Exception as e:
         print(f'Error getting assetstore import path: {e}')
         return None
 
+# Get user id
 def getUserId(gc):
     print('Getting user id')
     user = gc.get('/user/me')
@@ -80,3 +98,15 @@ def getUserId(gc):
         return gc.get('/token/current').get('userId')
     else:
         return user.get('_id')
+
+# Create json folder and move json files to json folder
+def moveJsonFiles(workPath):
+    print('Moving json files to json folder')
+    try:
+        jsonPath = os.path.join(workPath, 'json')
+        os.path.exists(jsonPath) or os.makedirs(jsonPath, mode=0o775)
+        for file in os.listdir(workPath):
+            if file.endswith('.json'):
+                shutil.move(os.path.join(workPath, file), jsonPath)
+    except Exception as e:
+        print(f'Error moving json files: {e}')

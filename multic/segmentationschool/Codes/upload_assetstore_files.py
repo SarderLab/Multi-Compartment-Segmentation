@@ -7,6 +7,7 @@ import shutil
 def uploadFilesToOriginalFolder(gc, output_filenames, slide_item_id, plugin_name, girderApiUrl, create_json_folder=False):
     print('Uploading files to user folder')
     # Get user id
+    print(f'item_id: {slide_item_id}')
     workPath = createWorkPath(gc, slide_item_id, plugin_name, girderApiUrl)
     user_id = getUserId(gc)
     # Check if there are files to upload
@@ -18,7 +19,6 @@ def uploadFilesToOriginalFolder(gc, output_filenames, slide_item_id, plugin_name
         return
     # Upload files to imported folder path
     try:
-        print(f'item_id: {slide_item_id}')
         # Create the directory if it does not exist
         os.path.exists(workPath) or os.makedirs(workPath, mode=0o775)
         # change the permission of the directory
@@ -79,17 +79,19 @@ def getAssetstoreImportPath(slideItemId, girderApiUrl):
         # check if itemID is imported from the assetstore
         print(f'Assetstore id is {assetStoreID}')
         print(f'Import path is {importPath}')
-        if assetStoreID == '':
-            print('No assetstore id found')
-        else:
-            assetStoreFiles = gc_assetstore.get(f'/assetstore/{assetStoreID}/files')
+        if assetStoreID: 
+            assetStoreFiles = gc_assetstore.get(f'/assetstore/{assetStoreID}/files', parameters={'limit': 0})
             for eachFile in assetStoreFiles:
-                if (eachFile.get('name') == getItemInfo.get('name')) and (eachFile.get(eachFile.get('path') == importPath)):
+                print('getting item from assetstore ', eachFile.get('itemId') == slideItemId)
+                if (eachFile.get('itemId') == slideItemId):
                     print('Assetstore import item found')
                     return importPath
                 else:
                     print('No assetstore import item found')
                     return None
+        else:
+            print('No assetstore id found')
+            return None        
     except Exception as e:
         print(f'Error getting assetstore import path: {e}')
         return None

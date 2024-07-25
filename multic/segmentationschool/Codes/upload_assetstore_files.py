@@ -68,7 +68,7 @@ def getAssetstoreImportPath(slideItemId, girderApiUrl):
         # Get the folder id for the slide item
         getItemInfo = gc_assetstore.get(f'/item/{slideItemId}')
         getFolderId = getItemInfo.get('folderId')
-        getAssetstoreImports = gc_assetstore.get('/assetstore/all_imports', parameters={'limit': '0'})
+        getAssetstoreImports = gc_assetstore.get('/assetstore/all_imports', parameters={'limit': 0})
         assetStoreID = ''
         importPath = ''
         # Get the import path for the folder id
@@ -79,16 +79,13 @@ def getAssetstoreImportPath(slideItemId, girderApiUrl):
         # check if itemID is imported from the assetstore
         print(f'Assetstore id is {assetStoreID}')
         print(f'Import path is {importPath}')
-        if assetStoreID: 
-            assetStoreFiles = gc_assetstore.get(f'/assetstore/{assetStoreID}/files', parameters={'limit': '0', 'sortdir': '-1'})
-            for eachFile in assetStoreFiles:
-                print('getting item from assetstore ', eachFile.get('itemId') == slideItemId)
-                if (eachFile.get('itemId') == slideItemId):
+        if assetStoreID:
+            assetStoreFilesRecords = gc_assetstore.get(f'/assetstore/{assetStoreID}/files', parameters={'limit': 0, 'sortdir': -1})
+            for record in assetStoreFilesRecords:
+                print('getting item from assetstore ', record.get('itemId') == slideItemId)
+                if (record.get('itemId') == slideItemId):
                     print('Assetstore import item found')
                     return importPath
-                else:
-                    print('No assetstore import item found')
-                    return None
         else:
             print('No assetstore id found')
             return None        

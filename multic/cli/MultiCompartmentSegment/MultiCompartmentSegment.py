@@ -26,7 +26,9 @@ DEFAULT_VALS = {
 
 
 def main(args):
-
+    for name, value in os.environ.items():
+        print(f"{name}={value}")
+    print(f"CUDAENV = {os.getenv('CUDA_VISIBLE_DEVICES')}")
     gc = girder_client.GirderClient(apiUrl=args.girderApiUrl)
     gc.setToken(args.girderToken)
 
@@ -75,4 +77,5 @@ def main(args):
     run_it(args)
 
 if __name__ == "__main__":
+    os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
     main(CLIArgumentParser().parse_args())

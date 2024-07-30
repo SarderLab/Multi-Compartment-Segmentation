@@ -69,8 +69,6 @@ def getAssetstoreImportPath(slideItemId, girderApiUrl):
         getItemInfo = gc_assetstore.get(f'/item/{slideItemId}')
         getFolderId = getItemInfo.get('folderId')
         getAssetstoreImports = gc_assetstore.get('/assetstore/all_imports', parameters={'limit': 0})
-        assetStoreFileID = ''
-        importPath = ''
         # Get the import path for the folder id
         for eachImport in getAssetstoreImports:
             if (eachImport.get('params').get('destinationId') == getFolderId):

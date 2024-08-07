@@ -239,27 +239,33 @@ def xml_suey(wsiMask, args, classNum, downsample,glob_offset):
             pointList = pointsList[i]
             Annotations = xml_add_region(Annotations=Annotations, pointList=pointList, annotationID=value)
     gc = args.gc
-    annots = convert_xml_json(Annotations, NAMES)
-    output_files = []
-    output_dir = '/tmp'
-    print('uploading layers')
-    for annot in annots:
-        _ = gc.post(path='annotation',parameters={'itemId':args.item_id}, data = json.dumps(annot))
-        # save json files
-        output_filename = annot['name'].replace("/", "_") + '.json'
-        file_path = os.path.join(output_dir, output_filename)
-        with open (file_path,'w') as f:
-            json.dump(annot,f)
-        print('output file: ', file_path)
-        output_files.append(file_path)
-    # add xml file to output files
-    with open (os.path.join(output_dir, 'annotations.xml'),'w') as f:
-        f.write(ET.tostring(Annotations, pretty_print=True).decode('utf-8'))
-    output_files.append(os.path.join(output_dir, 'annotations.xml'))
-    print('output files: ', output_files)
-    # upload files to original user folder
-    uploadFilesToOriginalFolder(gc, output_files, args.item_id, 'MultiCompartment_Segmentation', args.girderApiUrl, True)
-    print('annotation uploaded...\n')
+    cookie = 'ZjE4MzUwMDYxNDViY2RmMThmYmZjNmRmMjUxYTYxODc2NmIzOTA4ZGhhaXRoYW0ubW9oYW1lZGFiZGVsYXppbUBtZWRpY2luZS51ZmwuZWR1ITQyMzYsOTkhaGFpdGhhbS5tb2hhbWVkYTpIYWl0aGFtIEFiZGVsYXppbTpoYWl0aGFtLm1vaGFtZWRhQHVmbC5lZHU'
+    cookie_header = f'auth_tkt={cookie}'
+
+    with gc.session() as session:
+        session.headers.update({'Cookie': cookie_header})
+
+        annots = convert_xml_json(Annotations, NAMES)
+        output_files = []
+        output_dir = '/tmp'
+        print('uploading layers')
+        for annot in annots:
+            _ = gc.post(path='annotation',parameters={'itemId':args.item_id}, data = json.dumps(annot))
+            # save json files
+            output_filename = annot['name'].replace("/", "_") + '.json'
+            file_path = os.path.join(output_dir, output_filename)
+            with open (file_path,'w') as f:
+                json.dump(annot,f)
+            print('output file: ', file_path)
+            output_files.append(file_path)
+        # add xml file to output files
+        with open (os.path.join(output_dir, 'annotations.xml'),'w') as f:
+            f.write(ET.tostring(Annotations, pretty_print=True).decode('utf-8'))
+        output_files.append(os.path.join(output_dir, 'annotations.xml'))
+        print('output files: ', output_files)
+        # upload files to original user folder
+        uploadFilesToOriginalFolder(gc, output_files, args.item_id, 'MultiCompartment_Segmentation', args.girderApiUrl, True)
+        print('annotation uploaded...\n')
 
 def get_contour_points(mask, args, downsample,value, offset={'X': 0,'Y': 0}):
     # returns a dict pointList with point 'X' and 'Y' values

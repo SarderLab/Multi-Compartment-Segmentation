@@ -30,51 +30,57 @@ def main(args):
         print(f"{name}={value}")
     print(f"CUDAENV = {os.getenv('CUDA_VISIBLE_DEVICES')}")
     gc = girder_client.GirderClient(apiUrl=args.girderApiUrl)
-    gc.setToken(args.girderToken)
+    # TODO: This is a temporary solution to get the cookie from the gator auth token
+    cookie = 'ZjE4MzUwMDYxNDViY2RmMThmYmZjNmRmMjUxYTYxODc2NmIzOTA4ZGhhaXRoYW0ubW9oYW1lZGFiZGVsYXppbUBtZWRpY2luZS51ZmwuZWR1ITQyMzYsOTkhaGFpdGhhbS5tb2hhbWVkYTpIYWl0aGFtIEFiZGVsYXppbTpoYWl0aGFtLm1vaGFtZWRhQHVmbC5lZHU'
+    cookie_header = f'auth_tkt={cookie}'
 
-    # Finding the id for the current WSI (input_image)
-    file_id = args.input_file
-    file_info = gc.get(f'/file/{file_id}')
-    item_id = file_info['itemId']
+    with gc.session() as session:
+        session.headers.update({'Cookie': cookie_header})
+        gc.setToken(args.girderToken)
 
-    item_info = gc.get(f'/item/{item_id}')
+        # Finding the id for the current WSI (input_image)
+        file_id = args.input_file
+        file_info = gc.get(f'/file/{file_id}')
+        item_id = file_info['itemId']
 
-    file_name = file_info['name']
-    print(f'Running on: {file_name}')
+        item_info = gc.get(f'/item/{item_id}')
 
-    if os.path.exists('/mnt/girder_worker'):
-        print('Using /mnt/girder_worker as mounted path')
-        mounted_path = '{}/{}'.format('/mnt/girder_worker', os.listdir('/mnt/girder_worker')[0])
-    else:
-        print('Using /tmp/ as mounted path') 
-        mounted_path = os.getenv('TMPDIR')
+        file_name = file_info['name']
+        print(f'Running on: {file_name}')
 
-    # mounted_path = '{}/{}'.format('/mnt/girder_worker', os.listdir('/mnt/girder_worker')[0])
-    file_path = '{}/{}'.format(mounted_path,file_name)
-    gc.downloadFile(file_id, file_path)
+        if os.path.exists('/mnt/girder_worker'):
+            print('Using /mnt/girder_worker as mounted path')
+            mounted_path = '{}/{}'.format('/mnt/girder_worker', os.listdir('/mnt/girder_worker')[0])
+        else:
+            print('Using /tmp/ as mounted path') 
+            mounted_path = os.getenv('TMPDIR')
 
-    print(f'This is slide path: {file_path}')
+        # mounted_path = '{}/{}'.format('/mnt/girder_worker', os.listdir('/mnt/girder_worker')[0])
+        file_path = '{}/{}'.format(mounted_path,file_name)
+        gc.downloadFile(file_id, file_path)
 
-    print('new version')
-    _ = os.system("printf '\n---\n\nFOUND: [{}]\n'".format(args.input_file))
+        print(f'This is slide path: {file_path}')
 
-    cwd = os.getcwd()
-    print(cwd)
-    os.chdir(cwd)
+        print('new version')
+        _ = os.system("printf '\n---\n\nFOUND: [{}]\n'".format(args.input_file))
 
-    for d in DEFAULT_VALS:
-        if d not in list(vars(args).keys()):
-            setattr(args,d,DEFAULT_VALS[d])
+        cwd = os.getcwd()
+        print(cwd)
+        os.chdir(cwd)
 
-    setattr(args,'item_id', item_id)
-    setattr(args,'file', file_path)
-    setattr(args,'gc', gc)
+        for d in DEFAULT_VALS:
+            if d not in list(vars(args).keys()):
+                setattr(args,d,DEFAULT_VALS[d])
 
-    print(vars(args))
-    for d in vars(args):
-        print(f'argument: {d}, value: {getattr(args,d)}')
+        setattr(args,'item_id', item_id)
+        setattr(args,'file', file_path)
+        setattr(args,'gc', gc)
 
-    run_it(args)
+        print(vars(args))
+        for d in vars(args):
+            print(f'argument: {d}, value: {getattr(args,d)}')
+
+        run_it(args)
 
 if __name__ == "__main__":
     os.environ['CUDA_LAUNCH_BLOCKING'] = '1'

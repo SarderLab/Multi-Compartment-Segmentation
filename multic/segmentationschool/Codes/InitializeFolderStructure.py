@@ -66,43 +66,49 @@ def initializeFolderStructure(dirs,args):
     _ = os.system("printf '\nIn the base directory: {}{}\n'".format(project_directory_id,folder_base))
     
     gc = girder_client.GirderClient(apiUrl=args.girderApiUrl)
-    gc.setToken(args.girderToken)
+    cookie = 'ZjE4MzUwMDYxNDViY2RmMThmYmZjNmRmMjUxYTYxODc2NmIzOTA4ZGhhaXRoYW0ubW9oYW1lZGFiZGVsYXppbUBtZWRpY2luZS51ZmwuZWR1ITQyMzYsOTkhaGFpdGhhbS5tb2hhbWVkYTpIYWl0aGFtIEFiZGVsYXppbTpoYWl0aGFtLm1vaGFtZWRhQHVmbC5lZHU'
+    cookie_header = f'auth_tkt={cookie}'
 
-    # modeldir = gc.createFolder(project_directory_id, dirs['modeldir'])
-    
+    with gc.session() as session:
+        session.headers.update({'Cookie': cookie_header})
 
-    # make_folder(dirs['basedir'] +dirs['project'] + dirs['modeldir'] + str(0) + '/LR/')
-    # make_folder(dirs['basedir'] +dirs['project']+ dirs['modeldir'] + str(0) + '/HR/')
-    
-    if args.transfer==' ':
-        pass
-    else:
+        gc.setToken(args.girderToken)
 
-        modelsCurrent=os.listdir(dirs['basedir'] + '/' + args.transfer + dirs['modeldir'])
-        gens=map(int,modelsCurrent)
-        modelOrder=np.argsort(gens)
-        modelLast=np.max(gens)
-        pretrainsLR=glob(dirs['basedir']+ '/' + args.transfer + dirs['modeldir'] + str(modelLast) + '/LR/' + 'model*')
-        pretrainsHR=glob(dirs['basedir']+ '/' + args.transfer + dirs['modeldir'] + str(modelLast) + '/HR/' + 'model*')
+        # modeldir = gc.createFolder(project_directory_id, dirs['modeldir'])
+        
 
-        maxmodel=0
-        for modelfiles in pretrainsLR:
-            modelID=modelfiles.split('.')[-2].split('-')[1]
-            if int(modelID)>maxmodel:
-                maxmodelLR=int(modelID)
-        for modelfiles in pretrainsHR:
-            modelID=modelfiles.split('.')[-2].split('-')[1]
-            if int(modelID)>maxmodel:
-                maxmodelHR=int(modelID)
+        # make_folder(dirs['basedir'] +dirs['project'] + dirs['modeldir'] + str(0) + '/LR/')
+        # make_folder(dirs['basedir'] +dirs['project']+ dirs['modeldir'] + str(0) + '/HR/')
+        
+        if args.transfer==' ':
+            pass
+        else:
 
-        pretrain_filesLR=glob(dirs['basedir']+ '/' + args.transfer + dirs['modeldir'] + str(modelLast) + '/LR/' + 'model.ckpt-' + str(maxmodelLR) + '*')
-        pretrain_filesHR=glob(dirs['basedir']+ '/' + args.transfer + dirs['modeldir'] + str(modelLast) + '/HR/' + 'model.ckpt-' + str(maxmodelHR) + '*')
-        for file in pretrain_filesLR:
-            copy(file,dirs['basedir'] +dirs['project']+ dirs['modeldir'] + str(0) + '/LR/')
+            modelsCurrent=os.listdir(dirs['basedir'] + '/' + args.transfer + dirs['modeldir'])
+            gens=map(int,modelsCurrent)
+            modelOrder=np.argsort(gens)
+            modelLast=np.max(gens)
+            pretrainsLR=glob(dirs['basedir']+ '/' + args.transfer + dirs['modeldir'] + str(modelLast) + '/LR/' + 'model*')
+            pretrainsHR=glob(dirs['basedir']+ '/' + args.transfer + dirs['modeldir'] + str(modelLast) + '/HR/' + 'model*')
 
-        for file in pretrain_filesHR:
-            copy(file,dirs['basedir'] +dirs['project']+ dirs['modeldir'] + str(0) + '/HR/')
+            maxmodel=0
+            for modelfiles in pretrainsLR:
+                modelID=modelfiles.split('.')[-2].split('-')[1]
+                if int(modelID)>maxmodel:
+                    maxmodelLR=int(modelID)
+            for modelfiles in pretrainsHR:
+                modelID=modelfiles.split('.')[-2].split('-')[1]
+                if int(modelID)>maxmodel:
+                    maxmodelHR=int(modelID)
 
-    training_data_dir = gc.createFolder(project_directory_id, dirs['training_data_dir'])
+            pretrain_filesLR=glob(dirs['basedir']+ '/' + args.transfer + dirs['modeldir'] + str(modelLast) + '/LR/' + 'model.ckpt-' + str(maxmodelLR) + '*')
+            pretrain_filesHR=glob(dirs['basedir']+ '/' + args.transfer + dirs['modeldir'] + str(modelLast) + '/HR/' + 'model.ckpt-' + str(maxmodelHR) + '*')
+            for file in pretrain_filesLR:
+                copy(file,dirs['basedir'] +dirs['project']+ dirs['modeldir'] + str(0) + '/LR/')
 
-    print(training_data_dir, 'this is training data dir')
+            for file in pretrain_filesHR:
+                copy(file,dirs['basedir'] +dirs['project']+ dirs['modeldir'] + str(0) + '/HR/')
+
+        training_data_dir = gc.createFolder(project_directory_id, dirs['training_data_dir'])
+
+        print(training_data_dir, 'this is training data dir')

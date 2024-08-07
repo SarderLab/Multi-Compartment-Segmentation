@@ -114,8 +114,13 @@ def _connect_girder_client_to_local_dsa(ip):
     # connect a girder client to the local DSA docker
     apiUrl = 'http://%s:8080/api/v1' % ip
     gc = girder_client.GirderClient(apiUrl=apiUrl)
-    gc.authenticate('admin', 'password')
-    return gc
+    cookie = 'ZjE4MzUwMDYxNDViY2RmMThmYmZjNmRmMjUxYTYxODc2NmIzOTA4ZGhhaXRoYW0ubW9oYW1lZGFiZGVsYXppbUBtZWRpY2luZS51ZmwuZWR1ITQyMzYsOTkhaGFpdGhhbS5tb2hhbWVkYTpIYWl0aGFtIEFiZGVsYXppbTpoYWl0aGFtLm1vaGFtZWRhQHVmbC5lZHU'
+    cookie_header = f'auth_tkt={cookie}'
+
+    with gc.session() as session:
+        session.headers.update({'Cookie': cookie_header})
+        gc.authenticate('admin', 'password')
+        return gc
 
 
 def _connect_to_existing_local_dsa():

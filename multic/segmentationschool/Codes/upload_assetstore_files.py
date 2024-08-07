@@ -40,7 +40,8 @@ def uploadFilesToOriginalFolder(gc, output_filenames, slide_item_id, plugin_name
 def createWorkPath(gc, slideItemId, pluginName, girderApiUrl):
     print('Creating work path')
     try:
-        cookie = 'ZjE4MzUwMDYxNDViY2RmMThmYmZjNmRmMjUxYTYxODc2NmIzOTA4ZGhhaXRoYW0ubW9oYW1lZGFiZGVsYXppbUBtZWRpY2luZS51ZmwuZWR1ITQyMzYsOTkhaGFpdGhhbS5tb2hhbWVkYTpIYWl0aGFtIEFiZGVsYXppbTpoYWl0aGFtLm1vaGFtZWRhQHVmbC5lZHU'
+        # TODO: This is a temporary solution to get the cookie from the gator auth token    
+        cookie = os.getenv('AUTH_COOKIE')
         cookie_header = f'auth_tkt={cookie}'
 
         with gc.session() as session:
@@ -70,7 +71,8 @@ def getAssetstoreImportPath(slideItemId, girderApiUrl):
         # Start admin instance
         print(f'Getting api_key from env status is {api_key is not None}')
         gc_assetstore = girder_client.GirderClient(apiUrl=girderApiUrl)
-        cookie = 'ZjE4MzUwMDYxNDViY2RmMThmYmZjNmRmMjUxYTYxODc2NmIzOTA4ZGhhaXRoYW0ubW9oYW1lZGFiZGVsYXppbUBtZWRpY2luZS51ZmwuZWR1ITQyMzYsOTkhaGFpdGhhbS5tb2hhbWVkYTpIYWl0aGFtIEFiZGVsYXppbTpoYWl0aGFtLm1vaGFtZWRhQHVmbC5lZHU'
+        # TODO: This is a temporary solution to get the cookie from the gator auth token    
+        cookie = os.getenv('AUTH_COOKIE')
         cookie_header = f'auth_tkt={cookie}'
 
         with gc_assetstore.session() as session:
@@ -108,7 +110,8 @@ def getAssetstoreImportPath(slideItemId, girderApiUrl):
 # Get user id
 def getUserId(gc):
     print('Getting user id')
-    cookie = 'ZjE4MzUwMDYxNDViY2RmMThmYmZjNmRmMjUxYTYxODc2NmIzOTA4ZGhhaXRoYW0ubW9oYW1lZGFiZGVsYXppbUBtZWRpY2luZS51ZmwuZWR1ITQyMzYsOTkhaGFpdGhhbS5tb2hhbWVkYTpIYWl0aGFtIEFiZGVsYXppbTpoYWl0aGFtLm1vaGFtZWRhQHVmbC5lZHU'
+    # TODO: This is a temporary solution to get the cookie from the gator auth token
+    cookie = os.getenv('AUTH_COOKIE')
     cookie_header = f'auth_tkt={cookie}'
 
     with gc.session() as session:

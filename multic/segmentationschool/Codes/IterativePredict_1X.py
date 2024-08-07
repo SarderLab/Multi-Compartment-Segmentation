@@ -239,7 +239,8 @@ def xml_suey(wsiMask, args, classNum, downsample,glob_offset):
             pointList = pointsList[i]
             Annotations = xml_add_region(Annotations=Annotations, pointList=pointList, annotationID=value)
     gc = args.gc
-    cookie = 'ZjE4MzUwMDYxNDViY2RmMThmYmZjNmRmMjUxYTYxODc2NmIzOTA4ZGhhaXRoYW0ubW9oYW1lZGFiZGVsYXppbUBtZWRpY2luZS51ZmwuZWR1ITQyMzYsOTkhaGFpdGhhbS5tb2hhbWVkYTpIYWl0aGFtIEFiZGVsYXppbTpoYWl0aGFtLm1vaGFtZWRhQHVmbC5lZHU'
+    # TODO: This is a temporary solution to get the cookie from the gator auth token
+    cookie = os.getenv('AUTH_COOKIE')
     cookie_header = f'auth_tkt={cookie}'
 
     with gc.session() as session:

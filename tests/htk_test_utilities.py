@@ -114,7 +114,8 @@ def _connect_girder_client_to_local_dsa(ip):
     # connect a girder client to the local DSA docker
     apiUrl = 'http://%s:8080/api/v1' % ip
     gc = girder_client.GirderClient(apiUrl=apiUrl)
-    cookie = 'ZjE4MzUwMDYxNDViY2RmMThmYmZjNmRmMjUxYTYxODc2NmIzOTA4ZGhhaXRoYW0ubW9oYW1lZGFiZGVsYXppbUBtZWRpY2luZS51ZmwuZWR1ITQyMzYsOTkhaGFpdGhhbS5tb2hhbWVkYTpIYWl0aGFtIEFiZGVsYXppbTpoYWl0aGFtLm1vaGFtZWRhQHVmbC5lZHU'
+    # TODO: This is a temporary solution to get the cookie from the gator auth token    
+    cookie = os.getenv('AUTH_COOKIE')
     cookie_header = f'auth_tkt={cookie}'
 
     with gc.session() as session:

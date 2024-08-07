@@ -31,7 +31,7 @@ def main(args):
     print(f"CUDAENV = {os.getenv('CUDA_VISIBLE_DEVICES')}")
     gc = girder_client.GirderClient(apiUrl=args.girderApiUrl)
     # TODO: This is a temporary solution to get the cookie from the gator auth token
-    cookie = 'ZjE4MzUwMDYxNDViY2RmMThmYmZjNmRmMjUxYTYxODc2NmIzOTA4ZGhhaXRoYW0ubW9oYW1lZGFiZGVsYXppbUBtZWRpY2luZS51ZmwuZWR1ITQyMzYsOTkhaGFpdGhhbS5tb2hhbWVkYTpIYWl0aGFtIEFiZGVsYXppbTpoYWl0aGFtLm1vaGFtZWRhQHVmbC5lZHU'
+    cookie = os.getenv('AUTH_COOKIE')
     cookie_header = f'auth_tkt={cookie}'
 
     with gc.session() as session:

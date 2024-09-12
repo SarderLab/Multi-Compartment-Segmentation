@@ -22,6 +22,21 @@ This DSA plugin allows users to run image analysis jobs through the HistomicsUI 
 
 6. Once the job sucessfuly runs, the segmented compartments will appear on top of the image. You can visuazlie them all or one-by-one by selecting the layers you wish to view from Annotations/Other tab on the right.
 
+<img src="figures/fig4.png"  width="60%" height="30%">
+
+7. You can navigate through the slide and visualize an particular region and annotation by zooming in and out.
+
+<img src="figures/fig5.png"  width="60%" height="30%">
+
+### Feature extraction
+
+1. Once the image is annotated, morphometric features can be extracted for glomerulus, sclerotic glomerulus, tubule, and artery/arteriole layers by running the `FeatureExtraction` plugin.
+
+<img src="figures/fig6.png"  width="60%" height="30%">
+
+2. After the job is run, an excel spreadsheet will be created in the user's private directory with extracted features as shown below.
+
+<img src="figures/fig7.png"  width="60%" height="30%">
 
 # See Also
 

@@ -155,6 +155,7 @@ def IterateTraining(args):
     cfg.INPUT.MAX_SIZE_TRAIN=args.boxSize
     
     cfg.OUTPUT_DIR = args.base_dir+"/output"
+    os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
 
 
     def real_data(args,image_coordinates_val):
@@ -178,10 +179,7 @@ def IterateTraining(args):
     
     cfg.DATASETS.TEST = ("my_dataset_val",)
 
-    
-    
-    #os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
-    with open(cfg.OUTPUT_DIR+"/config_record.yaml", "w") as f:
+    with open(cfg.OUTPUT_DIR+"/config_record.yaml", "w+") as f:
         f.write(cfg.dump())   # save config to file
 
 

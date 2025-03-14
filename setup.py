@@ -45,7 +45,7 @@ setup(
     install_requires=[
         # scientific packages
         'nimfa>=1.3.2',
-        'numpy>=1.21.1',
+        'numpy>=1.23.1',
         'scipy>=0.19.0',
         'Pillow==9.5.0',
         'pandas>=0.19.2',
@@ -72,6 +72,7 @@ setup(
         # dask packages
         'dask[dataframe]>=1.1.0',
         'distributed>=1.21.6',
+        'imgaug',
         # large image sources
         # 'large-image[sources]',
         'girder-slicer-cli-web',

@@ -3,7 +3,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
-#SBATCH --mem=32gb
+#SBATCH --mem=64gb
 #SBATCH --partition=gpu
 #SBATCH --gpus=a100:1
 #SBATCH --time=72:00:00
@@ -31,17 +31,14 @@ ORANGEDIR=/orange/pinaki.sarder/anish.tatke/MCS
 DATADIR=$ORANGEDIR/TRAINING_data
 MODELDIR=$ORANGEDIR/pretrained_model
 
-CONTAINER=$ORANGEDIR/multic_segment.sif
+CONTAINER=/blue/pinaki.sarder/anish.tatke/sif_containers/mcs_training.sif
 CUDA_LAUNCH_BLOCKING=1
-
-singularity exec $CONTAINER python -m pip install --user imgaug
-singularity exec $CONTAINER python -m pip install --user numpy==1.23
 
 singularity exec --nv -B $(pwd):/exec/,$DATADIR/:/data,$MODELDIR/:/model/ $CONTAINER python3 /exec/segmentation_school.py \
     --option train \
     --base_dir $CODESDIR \
     --init_modelfile $MODELDIR/model_final.pth \
     --training_data_dir $DATADIR \
-    --train_steps 100000 \
-    --eval_period 25000 \
+    --train_steps 10000 \
+    --eval_period 2500 \
     --num_workers 8

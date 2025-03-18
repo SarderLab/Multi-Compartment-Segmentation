@@ -1,4 +1,6 @@
 multic/segmentationschool/logs/
 multic/segmentationschool/output/
+multic/segmentationschool/test.py
 multic/segmentationschool/*.ipynb
 multic/segmentationschool/Codes/__pycache__/
+multic/segmentationschool/__pycache__/

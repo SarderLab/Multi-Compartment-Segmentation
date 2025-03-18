@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<executable>
+  <category>HistomicsTK</category>
+  <title>Multi Compartment Training</title>
+  <description>Trains Multi compartment segmentation model</description>
+  <version>0.1.0</version>
+  <documentation-url>https://github.com/SarderLab/Multi-Compartment-Segmentation</documentation-url>
+  <license>Apache 2.0</license>
+  <contributor>Sayat Mimar (UFL)</contributor>
+  <acknowledgements>This work is part of efforts in digital pathology by the Sarder Lab: UFL.</acknowledgements>
+  <parameters>
+    <label>IO</label>
+    <description>Input/output parameters</description>
+    <directory>
+      <name>training_data_dir</name>
+      <label>Training Data Directory</label>
+      <description>Base Directory for the model</description>
+      <channel>input</channel>
+      <index>0</index>
+    </directory>
+    <file>
+      <name>init_modelfile</name>
+      <label>Model File</label>
+      <description>Trained model file</description>
+      <channel>input</channel>
+      <index>1</index>
+    </file>
+    <string>
+      <name>gpu</name>
+      <label>GPU IDs</label>
+      <description>A comma separated list of the GPU IDs that will be made avalable for training</description>
+      <default>0,1</default>
+      <index>2</index>
+    </string>
+    <integer>
+      <name>training_steps</name>
+      <label>Training steps</label>
+      <description>The number of steps used for network training. The network will see [steps * batch size] image patches during training</description>
+      <default>10000</default>
+      <index>3</index>
+    </integer>
+    <integer>
+      <name>num_workers</name>
+      <label>Number of workers</label>
+      <description>Number of workers for Dataloader</description>
+      <default>0</default>
+      <index>8</index>
+    </integer>
+    <file fileExtensions=".pth">
+      <name>output_model</name>
+      <label>Output Model Name</label>
+      <description>Select the name of the output model file produced. By default this will be saved in your Private folder.</description>
+      <channel>output</channel>
+      <index>5</index>
+    </file>
+  </parameters>
+  <parameters advanced="true">
+    <label>Girder API URL and Key</label>
+    <description>A Girder API URL and token for Girder client</description>
+    <string>
+      <name>girderApiUrl</name>
+      <longflag>api-url</longflag>
+      <label>Girder API URL</label>
+      <description>A Girder API URL (e.g., https://girder.example.com:443/api/v1)</description>
+      <default></default>
+    </string>
+    <string>
+      <name>girderToken</name>
+      <longflag>token</longflag>
+      <label>Girder API Token</label>
+      <description>A Girder token</description>
+      <default></default>
+    </string>
+  </parameters>
+</executable>

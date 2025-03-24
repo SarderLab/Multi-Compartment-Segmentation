@@ -25,34 +25,52 @@
       <channel>input</channel>
       <index>1</index>
     </file>
+    <file fileExtensions=".pth">
+      <name>output_model</name>
+      <label>Output Model Name</label>
+      <description>Select the name of the output model file produced. By default this will be saved in your Private folder.</description>
+      <channel>output</channel>
+      <index>2</index>
+    </file>
+  </parameters>
+  <parameters advanced="true">
+    <label>Training Parameters</label>
+    <description>Training parameters</description>
     <string>
       <name>gpu</name>
       <label>GPU IDs</label>
       <description>A comma separated list of the GPU IDs that will be made avalable for training</description>
       <default>0,1</default>
-      <index>2</index>
+      <index>0</index>
     </string>
     <integer>
       <name>training_steps</name>
       <label>Training steps</label>
       <description>The number of steps used for network training. The network will see [steps * batch size] image patches during training</description>
-      <default>10000</default>
-      <index>3</index>
+      <default>1000</default>
+      <index>1</index>
     </integer>
     <integer>
       <name>num_workers</name>
       <label>Number of workers</label>
       <description>Number of workers for Dataloader</description>
       <default>0</default>
-      <index>8</index>
+      <index>2</index>
     </integer>
-    <file fileExtensions=".pth">
-      <name>output_model</name>
-      <label>Output Model Name</label>
-      <description>Select the name of the output model file produced. By default this will be saved in your Private folder.</description>
-      <channel>output</channel>
-      <index>5</index>
-    </file>
+    <integer>
+      <name>eval_period</name>
+      <label>Validation Peroid</label>
+      <description>Validate after these many number of epochs</description>
+      <default>250</default>
+      <index>3</index>
+    </integer>
+    <integer>
+      <name>batch_size</name>
+      <label>Batch Size</label>
+      <description>Size of batches for training high resolution CNN</description>
+      <default>4</default>
+      <index>4</index>
+    </integer>
   </parameters>
   <parameters advanced="true">
     <label>Girder API URL and Key</label>

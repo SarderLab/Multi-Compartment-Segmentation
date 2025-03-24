@@ -54,14 +54,7 @@ def IterateTraining(args):
     dirs['training_data_dir'] = args.training_data_dir
     dirs['val_data_dir'] = args.training_data_dir
 
-
-
-
-
     print('Handcoded iteration')
-
-
-
 
     #os.environ["CUDA_VISIBLE_DEVICES"]=gpu
     #os.system('export CUDA_VISIBLE_DEVICES=$(nvidia-smi --query-gpu=memory.free,index --format=csv,nounits,noheader | sort -nr | head -1 | awk "{ print $NF }")')
@@ -98,7 +91,7 @@ def IterateTraining(args):
         classes[idx]={'isthing':isthing[idx],'color':xml_color[idx]}
 
 
-    num_images=args.batch_size*args.train_steps
+    num_images=args.batch_size * args.train_steps
     # slide_idxs=train_dset.get_random_slide_idx(num_images)
     usable_slides=get_slide_data(args, wsi_directory = dirs['training_data_dir'])
     print('Number of slides:', len(usable_slides))
@@ -113,7 +106,7 @@ def IterateTraining(args):
     usable_slides_val=get_slide_data(args, wsi_directory=dirs['val_data_dir'])
 
     usable_idx_val=range(0,len(usable_slides_val))
-    slide_idxs_val=random.choices(usable_idx_val,k=int(args.batch_size*args.train_steps/100))
+    slide_idxs_val=random.choices(usable_idx_val,k=int(args.batch_size * args.train_steps/100))
     image_coordinates_val=get_random_chops(slide_idxs_val,usable_slides_val,region_size)
 
 
@@ -154,7 +147,7 @@ def IterateTraining(args):
     cfg.INPUT.MIN_SIZE_TRAIN=args.boxSize
     cfg.INPUT.MAX_SIZE_TRAIN=args.boxSize
     
-    cfg.OUTPUT_DIR = args.base_dir+"/output"
+    cfg.OUTPUT_DIR = args.training_data_dir + "/output"
     os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
 
 

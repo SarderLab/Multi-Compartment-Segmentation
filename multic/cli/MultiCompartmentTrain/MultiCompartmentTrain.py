@@ -77,7 +77,6 @@ def process_xml(gc, files, xml_color, folder, tmp, slides_used) -> list:
 
         # include slide and fetch annotations
         _ = os.system("printf '\tFETCHING SLIDE...\n'")
-        os.rename('{}/{}'.format(folder, slidename), '{}/{}'.format(tmp, slidename))
         slides_used.append(slidename)
 
         xml_path = '{}/{}.xml'.format(tmp, os.path.splitext(slidename)[0])

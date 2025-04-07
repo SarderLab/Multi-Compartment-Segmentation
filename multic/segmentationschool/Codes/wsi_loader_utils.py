@@ -92,6 +92,7 @@ def get_slide_data(args, wsi_directory=None):
         all_slides=[]
         for ext in args.wsi_ext.split(','):
             all_slides.extend(glob.glob(wsi_directory+'/*'+ext))
+        print('Found {} slides'.format(len(all_slides)))
         print('Getting slide metadata and usable regions...')
 
         usable_slides=[]
@@ -101,8 +102,8 @@ def get_slide_data(args, wsi_directory=None):
             if os.path.isfile(xmlpath):
                 write_minmax_to_xml(xmlpath)
 
-                print("Gathering slide data ... "+ slideID,end='\r')
-                slide =TiffSlide(slide_loc)
+                print("Gathering slide data ... "+ slideID + "from " + slide_loc, end='\r')
+                slide = TiffSlide(slide_loc)
                 chop_array=get_choppable_regions(slide,args,slideID,slideExt,mask_out_loc)
 
                 mag_x=np.round(float(slide.properties['tiffslide.mpp-x']),2)
@@ -136,7 +137,7 @@ def get_slide_data(args, wsi_directory=None):
                 print('no annotation XML file found for:')
                 print(slideID)
                 exit()
-        print('\n')
+        print("\n Found {} slides with usable regions".format(len(usable_slides)))
         return usable_slides
 
 def get_random_chops(slide_idx,usable_slides,region_size):

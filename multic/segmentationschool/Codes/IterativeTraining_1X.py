@@ -58,8 +58,6 @@ def IterateTraining(args):
 
     #os.environ["CUDA_VISIBLE_DEVICES"]=gpu
     #os.system('export CUDA_VISIBLE_DEVICES=$(nvidia-smi --query-gpu=memory.free,index --format=csv,nounits,noheader | sort -nr | head -1 | awk "{ print $NF }")')
-    os.environ["CUDA_VISIBLE_DEVICES"] ='2,3'
-    os.environ["CUDA_LAUNCH_BLOCKING"] ='1'
 
 
     organType='kidney'
@@ -129,6 +127,7 @@ def IterateTraining(args):
 
 
     cfg.SOLVER.IMS_PER_BATCH = args.batch_size
+    cfg.SOLVER.AMP.ENABLED = True
 
 
     cfg.SOLVER.LR_policy='steps_with_lrs'
@@ -179,7 +178,15 @@ def IterateTraining(args):
     trainer = Trainer(cfg)
     print('check and see')
     trainer.resume_or_load(resume=False)
-    trainer.train()
+    try:
+        trainer.train()
+    except RuntimeError as e:
+        if 'out of memory' in str(e):
+            print(e)
+            torch.cuda.empty_cache()
+            print('Cleared cache')
+        else:
+            raise e
 
     _ = os.system("printf '\nTraining completed!\n'")
 

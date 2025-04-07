@@ -122,15 +122,15 @@ def main(args):
     _ = os.system("printf '\ndone retriving data...\nstarting training...\n\n'")
 
 
-    cmd = f"python3 ../segmentationschool/segmentation_school.py \
-        --option {'train'} \
-        --training_data_dir {tmp.replace(' ', '\ ')} \
-        --init_modelfile {args.init_modelfile} \
-        --gpu {args.gpu} \
-        --train_steps {args.training_steps} \
-        --num_workers {args.num_workers} \
-        --girderApiUrl {args.girderApiUrl} \
-        --girderToken {args.girderToken}"
+    cmd = "python3 ../segmentationschool/segmentation_school.py \
+        --option {} \
+        --training_data_dir {} \
+        --init_modelfile {} \
+        --gpu {} \
+        --train_steps {} \
+        --num_workers {} \
+        --girderApiUrl {} \
+        --girderToken {}".format('train', tmp.replace(' ', '\ '), args.init_modelfile, args.gpu, args.training_steps, args.num_workers, args.girderApiUrl, args.girderToken)
     
     print(cmd)
     sys.stdout.flush()

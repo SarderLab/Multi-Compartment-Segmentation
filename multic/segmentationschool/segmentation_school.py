@@ -300,8 +300,5 @@ if __name__ == '__main__':
     parser.add_argument('--num_workers', dest='num_workers', default=1 ,type=int,
         help='Number of workers for data loader')
 
-
-
-
     args = parser.parse_args()
     main(args=args)

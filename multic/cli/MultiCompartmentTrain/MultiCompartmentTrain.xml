@@ -38,9 +38,9 @@
     <description>Training parameters</description>
     <string>
       <name>gpu</name>
-      <label>GPU IDs</label>
-      <description>A comma separated list of the GPU IDs that will be made avalable for training</description>
-      <default>0,1</default>
+      <label>GPUs</label>
+      <description>Number of GPUs that you want to be made available for this training</description>
+      <default>1</default>
       <index>0</index>
     </string>
     <integer>
@@ -80,7 +80,7 @@
       <longflag>api-url</longflag>
       <label>Girder API URL</label>
       <description>A Girder API URL (e.g., https://girder.example.com:443/api/v1)</description>
-      <default></default>
+      <default>https://dsa.rc.ufl.edu/api/v1</default>
     </string>
     <string>
       <name>girderToken</name>

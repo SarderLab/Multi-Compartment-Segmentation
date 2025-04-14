@@ -37,7 +37,7 @@
     <label>Training Parameters</label>
     <description>Training parameters</description>
     <string>
-      <name>gpu</name>
+      <name>gpus</name>
       <label>GPUs</label>
       <description>Number of GPUs that you want to be made available for this training</description>
       <default>1</default>
@@ -59,7 +59,7 @@
     </integer>
     <integer>
       <name>eval_period</name>
-      <label>Validation Peroid</label>
+      <label>Validation Hook Interval</label>
       <description>Validate after these many number of epochs</description>
       <default>250</default>
       <index>3</index>

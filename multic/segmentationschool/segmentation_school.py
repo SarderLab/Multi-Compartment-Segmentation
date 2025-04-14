@@ -174,8 +174,9 @@ if __name__ == '__main__':
     ##### Args for training / prediction ####################################################
     parser.add_argument('--gpu_num', dest='gpu_num', default=2 ,type=int,
         help='number of GPUs avalable')
-    parser.add_argument('--gpu', dest='gpu', default="" ,type=str,
-        help='GPU to use for prediction')
+    # parser.add_argument('--gpu', dest='gpu', default="" ,type=str,
+    #     help='GPU to use for prediction')
+    
     parser.add_argument('--iteration', dest='iteration', default='none' ,type=str,
         help='Which iteration to use for prediction')
     parser.add_argument('--prune_HR', dest='prune_HR', default=0.0 ,type=float,

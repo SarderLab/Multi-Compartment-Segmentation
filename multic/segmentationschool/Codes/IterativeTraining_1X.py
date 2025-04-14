@@ -174,19 +174,10 @@ def IterateTraining(args):
     with open(cfg.OUTPUT_DIR+"/config_record.yaml", "w+") as f:
         f.write(cfg.dump())   # save config to file
 
-
     trainer = Trainer(cfg)
     print('check and see')
     trainer.resume_or_load(resume=False)
-    try:
-        trainer.train()
-    except RuntimeError as e:
-        if 'out of memory' in str(e):
-            print(e)
-            torch.cuda.empty_cache()
-            print('Cleared cache')
-        else:
-            raise e
+    trainer.train()
 
     _ = os.system("printf '\nTraining completed!\n'")
 

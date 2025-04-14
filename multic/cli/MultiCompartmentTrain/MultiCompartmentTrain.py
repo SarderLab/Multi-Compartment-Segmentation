@@ -127,9 +127,11 @@ def main(args):
         --init_modelfile {} \
         --gpu {} \
         --train_steps {} \
+        --eval_period {} \
         --num_workers {} \
+        --batch_size {} \
         --girderApiUrl {} \
-        --girderToken {}".format('train', tmp.replace(' ', '\ '), args.init_modelfile, args.gpu, args.training_steps, args.num_workers, args.girderApiUrl, args.girderToken)
+        --girderToken {}".format('train', tmp.replace(' ', '\ '), args.init_modelfile, args.gpu, args.training_steps, args.eval_period, args.num_workers, args.batch_size, args.girderApiUrl, args.girderToken)
     
     print(cmd)
     sys.stdout.flush()

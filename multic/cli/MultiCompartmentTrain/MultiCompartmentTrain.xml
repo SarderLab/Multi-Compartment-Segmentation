@@ -68,7 +68,7 @@
       <name>batch_size</name>
       <label>Batch Size</label>
       <description>Size of batches for training high resolution CNN</description>
-      <default>4</default>
+      <default>2</default>
       <index>4</index>
     </integer>
   </parameters>

@@ -17,6 +17,8 @@ echo "SLURMTMPDIR="$SLURMTMPDIR
 echo "working directory = "$SLURM_SUBMIT_DIR
 ulimit -s unlimited
 module load singularity
+pwd
+date
 ls
 ml
 
@@ -34,11 +36,15 @@ MODELDIR=$ORANGEDIR/pretrained_model
 CONTAINER=/blue/pinaki.sarder/anish.tatke/sif_containers/mcs_training.sif
 CUDA_LAUNCH_BLOCKING=1
 
+# singularity exec --writable $CONTAINER pip install --user numpy==1.23.5 scalene
+# singularity exec --writable $CONTAINER python3 -m scalene.set_nvidia_gpu_modes
+
 singularity exec --nv -B $(pwd):/exec/,$DATADIR/:/data,$MODELDIR/:/model/ $CONTAINER python3 /exec/segmentation_school.py \
     --option train \
     --base_dir $CODESDIR \
     --init_modelfile $MODELDIR/model_final.pth \
     --training_data_dir $DATADIR \
-    --train_steps 10000 \
-    --eval_period 2500 \
-    --num_workers 8
+    --train_steps 20 \
+    --eval_period 5 \
+    --num_workers 2 \
+    --batch_size 2 \

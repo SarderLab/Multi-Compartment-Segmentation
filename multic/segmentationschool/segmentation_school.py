@@ -192,7 +192,7 @@ if __name__ == '__main__':
         help='the desired model file to use for training or prediction')
     parser.add_argument('--eval_period', dest='eval_period', default=1000 ,type=int,
         help='Validation Period')
-    parser.add_argument('--batch_size', dest='batch_size', default=4 ,type=int,
+    parser.add_argument('--batch_size', dest='batch_size', default=2 ,type=int,
         help='Size of batches for training high resolution CNN')
     parser.add_argument('--train_steps', dest='train_steps', default=1000 ,type=int,
         help='Size of batches for training high resolution CNN')

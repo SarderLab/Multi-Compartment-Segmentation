@@ -47,7 +47,7 @@
       <name>training_steps</name>
       <label>Training steps</label>
       <description>The number of steps used for network training. The network will see [steps * batch size] image patches during training</description>
-      <default>1000</default>
+      <default>10000</default>
       <index>1</index>
     </integer>
     <integer>
@@ -61,14 +61,14 @@
       <name>eval_period</name>
       <label>Validation Peroid</label>
       <description>Validate after these many number of epochs</description>
-      <default>250</default>
+      <default>2500</default>
       <index>3</index>
     </integer>
     <integer>
       <name>batch_size</name>
       <label>Batch Size</label>
       <description>Size of batches for training high resolution CNN</description>
-      <default>2</default>
+      <default>4</default>
       <index>4</index>
     </integer>
   </parameters>
@@ -80,7 +80,7 @@
       <longflag>api-url</longflag>
       <label>Girder API URL</label>
       <description>A Girder API URL (e.g., https://girder.example.com:443/api/v1)</description>
-      <default>https://dsa.rc.ufl.edu/api/v1</default>
+      <default></default>
     </string>
     <string>
       <name>girderToken</name>

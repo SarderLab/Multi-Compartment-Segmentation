@@ -172,10 +172,10 @@ if __name__ == '__main__':
 
 
     ##### Args for training / prediction ####################################################
-    parser.add_argument('--gpu_num', dest='gpu_num', default=2 ,type=int,
-        help='number of GPUs avalable')
-    parser.add_argument('--gpu', dest='gpu', default="" ,type=str,
-        help='GPU to use for prediction')
+    # parser.add_argument('--gpu_num', dest='gpu_num', default=2 ,type=int,
+    #     help='number of GPUs avalable')
+    parser.add_argument('--gpu', dest='gpu', default=1 ,type=int,
+        help='Number of GPU to use for prediction')
     parser.add_argument('--iteration', dest='iteration', default='none' ,type=str,
         help='Which iteration to use for prediction')
     parser.add_argument('--prune_HR', dest='prune_HR', default=0.0 ,type=float,
@@ -192,7 +192,7 @@ if __name__ == '__main__':
         help='the desired model file to use for training or prediction')
     parser.add_argument('--eval_period', dest='eval_period', default=1000 ,type=int,
         help='Validation Period')
-    parser.add_argument('--batch_size', dest='batch_size', default=2 ,type=int,
+    parser.add_argument('--batch_size', dest='batch_size', default=4 ,type=int,
         help='Size of batches for training high resolution CNN')
     parser.add_argument('--train_steps', dest='train_steps', default=1000 ,type=int,
         help='Size of batches for training high resolution CNN')
@@ -299,6 +299,9 @@ if __name__ == '__main__':
         help='padded region for low resolution region extraction')
     parser.add_argument('--num_workers', dest='num_workers', default=1 ,type=int,
         help='Number of workers for data loader')
+
+
+
 
     args = parser.parse_args()
     main(args=args)

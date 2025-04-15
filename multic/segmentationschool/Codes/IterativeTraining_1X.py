@@ -56,9 +56,8 @@ def IterateTraining(args):
 
     print('Handcoded iteration')
 
-    #os.environ["CUDA_VISIBLE_DEVICES"]=gpu
-    #os.system('export CUDA_VISIBLE_DEVICES=$(nvidia-smi --query-gpu=memory.free,index --format=csv,nounits,noheader | sort -nr | head -1 | awk "{ print $NF }")')
-
+    os.environ["CUDA_VISIBLE_DEVICES"]=args.gpu
+    os.environ["CUDA_LAUNCH_BLOCKING"] ='1'
 
     organType='kidney'
     print('Organ meta being set to... '+ organType)
@@ -169,13 +168,13 @@ def IterateTraining(args):
     MetadataCatalog.get("my_dataset_val").set(thing_classes=tc)
     MetadataCatalog.get("my_dataset_val").set(stuff_classes=sc)
     
-    cfg.DATASETS.TEST = ("my_dataset_val",)
+    cfg.DATASETS.TEST = ("my_dataset_val")
 
     with open(cfg.OUTPUT_DIR+"/config_record.yaml", "w+") as f:
         f.write(cfg.dump())   # save config to file
 
     trainer = Trainer(cfg)
-    print('check and see')
+
     trainer.resume_or_load(resume=False)
     trainer.train()
 

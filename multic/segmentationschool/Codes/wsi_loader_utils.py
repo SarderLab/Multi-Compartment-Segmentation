@@ -10,7 +10,6 @@ from joblib import Parallel, delayed
 from shapely.geometry import Polygon
 from tiffslide import TiffSlide
 import random
-import glob
 import warnings
 from joblib import Parallel, delayed
 import multiprocessing

@@ -15,7 +15,7 @@ class LossEvalHook(HookBase):
     
     def _do_loss_eval(self):
         # Copying inference_on_dataset from evaluator.py
-        total = len(self._data_loader)
+        total = max(len(self._data_loader), 1)
         num_warmup = min(5, total - 1)
             
         start_time = time.perf_counter()

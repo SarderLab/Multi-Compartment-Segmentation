@@ -55,9 +55,8 @@ def IterateTraining(args):
     dirs['val_data_dir'] = args.training_data_dir
 
     print('Handcoded iteration')
-
-    os.environ["CUDA_VISIBLE_DEVICES"]=args.gpu
-    os.environ["CUDA_LAUNCH_BLOCKING"] ='1'
+    # os.environ["CUDA_VISIBLE_DEVICES"]=args.gpu
+    # os.environ["CUDA_LAUNCH_BLOCKING"] ='1'
 
     organType='kidney'
     print('Organ meta being set to... '+ organType)

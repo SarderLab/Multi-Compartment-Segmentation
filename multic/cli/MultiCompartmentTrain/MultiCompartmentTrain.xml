@@ -36,18 +36,18 @@
   <parameters advanced="true">
     <label>Training Parameters</label>
     <description>Training parameters</description>
-    <string>
-      <name>gpus</name>
+    <integer>
+      <name>gpu</name>
       <label>GPUs</label>
       <description>Number of GPUs that you want to be made available for this training</description>
       <default>1</default>
       <index>0</index>
-    </string>
+    </integer>
     <integer>
-      <name>training_steps</name>
+      <name>train_steps</name>
       <label>Training steps</label>
       <description>The number of steps used for network training. The network will see [steps * batch size] image patches during training</description>
-      <default>10000</default>
+      <default>1000</default>
       <index>1</index>
     </integer>
     <integer>
@@ -61,7 +61,7 @@
       <name>eval_period</name>
       <label>Validation Hook Interval</label>
       <description>Validate after these many number of epochs</description>
-      <default>2500</default>
+      <default>250</default>
       <index>3</index>
     </integer>
     <integer>

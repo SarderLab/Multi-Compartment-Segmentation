@@ -7,8 +7,32 @@ from ctk_cli import CLIArgumentParser
 sys.path.append("..")
 from segmentationschool.utils.mask_to_xml import xml_create, xml_add_annotation, xml_add_region, xml_save
 from segmentationschool.utils.xml_to_mask import write_minmax_to_xml
+from segmentationschool.segmentation_school import run_it
 
 NAMES = ['cortical_interstitium','medullary_interstitium','non_globally_sclerotic_glomeruli','globally_sclerotic_glomeruli','tubules','arteries/arterioles']
+
+DEFAULT_VALS = {
+    'girderApiUrl':' ',
+    'girderToken':' ',
+    'option':'train',
+    'training_data_dir':' ',
+    'init_modelfile':' ',
+    'output_model':' ',
+    'base_dir': os.getcwd(),
+    'gpu':1,
+    'train_steps':1000,
+    'eval_period':250,
+    'num_workers':0,
+    'batch_size':4,
+    'boxSize':1200,
+    'wsi_ext': '.svs,.scn,.ndpi',
+    'downsampleRate': 1,
+    'overlap_rate': 0.5,
+    'chop_thumbnail_resolution': 16,
+    'get_new_tissue_masks': False,
+    'white_percent': 0.01,
+    'balanceClasses': '3,4,5,6',
+}
 
 def process_xml(gc, files, xml_color, folder, tmp, slides_used) -> list:
     for file in files:
@@ -87,8 +111,16 @@ def process_xml(gc, files, xml_color, folder, tmp, slides_used) -> list:
     
     return slides_used
 
-def main(args):
-
+def main(args):    
+    if args.training_data_dir == ' ':
+        raise ValueError("Training data directory is required.")
+    
+    if args.init_modelfile == ' ':
+        raise ValueError("Initial model file is required.")
+    
+    if args.output_model == ' ':
+        raise ValueError("Output model file is required.")
+    
     folder = args.training_data_dir
     base_dir_id = folder.split('/')[-2]
     _ = os.system("printf '\nUsing data from girder_client Folder: {}\n'".format(folder))
@@ -107,12 +139,14 @@ def main(args):
 
     tmp = folder
     slides_used = []
-    ignore_label = len(NAMES)+1
 
     slides_used = process_xml(gc, files, xml_color, folder, tmp, slides_used)
     
-
     os.system("ls -lh '{}'".format(tmp))
+
+    for d in DEFAULT_VALS:
+        if d not in list(vars(args).keys()):
+            setattr(args,d,DEFAULT_VALS[d])
 
     trainlogdir=os.path.join(tmp, 'output')
     if not os.path.exists(trainlogdir):
@@ -120,22 +154,13 @@ def main(args):
     
     _ = os.system("printf '\ndone retriving data...\nstarting training...\n\n'")
 
+    print(vars(args))
+    for d in vars(args):
+        print(f'argument: {d}, value: {getattr(args,d)}')
 
-    cmd = "python3 ../segmentationschool/segmentation_school.py \
-        --option {} \
-        --training_data_dir {} \
-        --init_modelfile {} \
-        --gpu_num {} \
-        --train_steps {} \
-        --eval_period {} \
-        --num_workers {} \
-        --batch_size {} \
-        --girderApiUrl {} \
-        --girderToken {}".format('train', tmp.replace(' ', '\ '), args.init_modelfile, args.gpus, args.training_steps, args.eval_period, args.num_workers, args.batch_size, args.girderApiUrl, args.girderToken)
+    run_it(args)
     
-    print(cmd)
     sys.stdout.flush()
-    os.system(cmd)
 
     os.listdir(trainlogdir)
     os.chdir(trainlogdir)
@@ -149,8 +174,6 @@ def main(args):
     os.rename(latest_model, args.output_model)
 
     _ = os.system("printf '\nDone!\n\n'")
-
-
 
 if __name__ == "__main__":
     main(CLIArgumentParser().parse_args())

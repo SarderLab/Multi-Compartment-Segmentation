@@ -48,7 +48,7 @@ setup(
         'numpy==1.23.5',
         'scipy>=0.19.0',
         'Pillow==9.5.0',
-        'pandas>=0.19.2',
+        # 'pandas>=0.19.2',
         'imageio>=2.3.0',
         # 'shapely[vectorized]',
         #'opencv-python-headless<4.7',

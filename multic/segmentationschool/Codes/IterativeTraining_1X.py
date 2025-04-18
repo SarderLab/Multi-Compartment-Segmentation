@@ -149,8 +149,6 @@ def IterateTraining(args):
 
 
     def real_data(args,image_coordinates_val):
-
-
         all_list=[]
         for one in train_samples_from_WSI(args,image_coordinates_val):
             dataset_dict = one
@@ -167,7 +165,7 @@ def IterateTraining(args):
     MetadataCatalog.get("my_dataset_val").set(thing_classes=tc)
     MetadataCatalog.get("my_dataset_val").set(stuff_classes=sc)
     
-    cfg.DATASETS.TEST = ("my_dataset_val")
+    cfg.DATASETS.TEST = ("my_dataset_val", )
 
     with open(cfg.OUTPUT_DIR+"/config_record.yaml", "w+") as f:
         f.write(cfg.dump())   # save config to file
@@ -221,7 +219,7 @@ class Trainer(DefaultTrainer):
                      
     def build_hooks(self):
         hooks = super().build_hooks()
-        hooks.insert(-1,LossEvalHook(
+        hooks.insert(-1, LossEvalHook(
             self.cfg.TEST.EVAL_PERIOD,
             self.model,
             build_detection_test_loader(

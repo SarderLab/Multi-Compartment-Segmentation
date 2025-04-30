@@ -222,7 +222,6 @@ def IterateTraining(args):
 
     #-----------------------------------------------------------------------------------------
     # os.environ["CUDA_VISIBLE_DEVICES"]='0'
-    os.environ["CUDA_VISIBLE_DEVICES"]=str(args.gpu)
     # img_dir='/hdd/bg/Detectron2/chop_detectron/Permanent/HR'
 
     img_dir=dirs['outDirAIHR']

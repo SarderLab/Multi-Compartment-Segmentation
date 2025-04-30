@@ -70,8 +70,6 @@ def predict(args):
     step = int((region_size-(args.bordercrop*2))*(1-args.overlap_percentHR))
 
     print('Building network configuration ...\n')
-
-    os.environ["CUDA_VISIBLE_DEVICES"]="0"
     
     cfg = get_cfg()
     cfg.merge_from_file(model_zoo.get_config_file("COCO-PanopticSegmentation/panoptic_fpn_R_50_3x.yaml"))

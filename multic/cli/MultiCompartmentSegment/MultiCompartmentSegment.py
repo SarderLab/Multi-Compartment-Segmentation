@@ -77,5 +77,4 @@ def main(args):
     run_it(args)
 
 if __name__ == "__main__":
-    os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
     main(CLIArgumentParser().parse_args())

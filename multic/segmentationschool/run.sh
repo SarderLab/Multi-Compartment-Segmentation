@@ -20,7 +20,6 @@ module list
 which python
 
 echo "Launch job"
-CUDA_LAUNCH_BLOCKING=1
 python3 segmentation_school.py --option predict --project CODEX/ --base_dir /blue/pinaki.sarder/nlucarelli/Detectron/ --modelfile /blue/pinaki.sarder/nlucarelli/Detectron/model_0214999.pth
 
 

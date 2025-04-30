@@ -60,7 +60,7 @@ def createWorkPath(gc, slideItemId, pluginName, girderApiUrl):
 def getAssetstoreImportPath(slideItemId, girderApiUrl):
     print('Getting assetstore import path')
     try:
-        api_key=os.getenv('GIRDER_API_KEY', 'GBTHusPP0FBUzGX9FlIsg4R6JoB9ZWtHk1m5lzq3')
+        api_key=os.getenv('GIRDER_API_KEY', 'xMURZcs4s4sCADvXAJmrsVdZ1RBHIvax7Z56rTCC')
         # Start admin instance
         print(f'Getting api_key from env status is {api_key is not None}')
         gc_assetstore = girder_client.GirderClient(apiUrl=girderApiUrl)

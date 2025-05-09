@@ -18,6 +18,8 @@ from tiffslide import TiffSlide
 from skimage.color import rgb2hsv
 from skimage.filters import gaussian
 
+import tifffile
+
 
 NAMES = ['cortical_interstitium','medullary_interstitium','non_globally_sclerotic_glomeruli','globally_sclerotic_glomeruli','tubules','arteries/arterioles']
 XML_COLOR = [65280, 16776960,65535, 255, 16711680, 33023]
@@ -109,16 +111,24 @@ def predict(args):
     except:
         raise Exception(f"The slide cannot be read!!")
         
+    try:
+        if extname=='.scn':
+            dim_y=int(slide.properties['tiffslide.bounds-height'])
+            dim_x=int(slide.properties['tiffslide.bounds-width'])
+            offsetx=int(slide.properties['tiffslide.bounds-x'])
+            offsety=int(slide.properties['tiffslide.bounds-y'])
+        else:
+            dim_x, dim_y=slide.dimensions
+            offsetx=0
+            offsety=0
+    except Exception as e:
+        save_dir = get_tmp_dir()
+        converted_path = convert_scn_to_tiff(scn_path=wsi, save_dir=save_dir)
+        slide = TiffSlide(converted_path)
+        dim_x, dim_y = slide.dimensions
+        offsetx = offsety = 0
 
-    if extname=='.scn':
-        dim_y=int(slide.properties['openslide.bounds-height'])
-        dim_x=int(slide.properties['openslide.bounds-width'])
-        offsetx=int(slide.properties['openslide.bounds-x'])
-        offsety=int(slide.properties['openslide.bounds-y'])
-    else:
-        dim_x, dim_y=slide.dimensions
-        offsetx=0
-        offsety=0
+        
 
     print(dim_x,dim_y)
     fileID=basename.split('/')
@@ -307,3 +317,42 @@ def xml_add_region(Annotations, pointList, annotationID=-1, regionID=None): # ad
     # add connecting point
     ET.SubElement(Vertices, 'Vertex', attrib={'X': str(pointList[0]['X']), 'Y': str(pointList[0]['Y']), 'Z': '0'})
     return Annotations
+
+def get_tmp_dir():
+    if os.path.exists('/mnt/girder_worker'):
+        return '{}/{}'.format('/mnt/girder_worker', os.listdir('/mnt/girder_worker')[0])
+    return os.getenv('TMPDIR', '/tmp')
+
+def convert_scn_to_tiff(scn_path: str, save_dir:str):
+    try:
+        with tifffile.TiffFile(scn_path) as tif:
+            largest_series = max(tif.series, key=lambda s: s.shape[0] * s.shape[1])
+            pyramid_images = [page.asarray() for page in largest_series.page]
+    except Exception as e:
+        raise("Failed to open SCN image with TiffFile")
+    
+    base_name = os.path.splitext(os.path.basename(scn_path))[0]
+    out_path = os.path.join(save_dir, f"{base_name}_converted.tiff")  
+    
+    try:
+        with tifffile.TiffFile(out_path, bigtiff=True) as tiff:
+            tiff.write(
+                data=pyramid_images[0],
+                photometric='rgb',
+                tile=(256, 256),
+                compression='jpeg',
+                subifds=len(pyramid_images)-1,
+                metadata={'axes':'YXS'}
+            )
+            for sub_image in pyramid_images[1:]:
+                tiff.write(
+                    data=sub_image,
+                    photometric='rgb',
+                    tile=(256, 256),
+                    compression='jpeg',
+                    metadata={'axes':'YXS'}
+                )
+    except Exception as e:
+        raise("Failed to write TIFF file with TiffFile")
+    print(f"Converted SCN to TIFF and saved to {out_path}")
+    return out_path

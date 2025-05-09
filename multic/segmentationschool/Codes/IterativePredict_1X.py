@@ -327,15 +327,15 @@ def convert_scn_to_tiff(scn_path: str, save_dir:str):
     try:
         with tifffile.TiffFile(scn_path) as tif:
             largest_series = max(tif.series, key=lambda s: s.shape[0] * s.shape[1])
-            pyramid_images = [page.asarray() for page in largest_series.page]
+            pyramid_images = [page.asarray() for page in largest_series.pages]
     except Exception as e:
-        raise("Failed to open SCN image with TiffFile")
+        raise Exception("Failed to open SCN image with TiffFile")
     
     base_name = os.path.splitext(os.path.basename(scn_path))[0]
     out_path = os.path.join(save_dir, f"{base_name}_converted.tiff")  
     
     try:
-        with tifffile.TiffFile(out_path, bigtiff=True) as tiff:
+        with tifffile.TiffWriter(out_path, bigtiff=True) as tiff:
             tiff.write(
                 data=pyramid_images[0],
                 photometric='rgb',
@@ -353,6 +353,6 @@ def convert_scn_to_tiff(scn_path: str, save_dir:str):
                     metadata={'axes':'YXS'}
                 )
     except Exception as e:
-        raise("Failed to write TIFF file with TiffFile")
+        raise Exception("Failed to write TIFF file with TiffFile")
     print(f"Converted SCN to TIFF and saved to {out_path}")
     return out_path

@@ -1,0 +1,16 @@
+*.py[cod]
+__pycache__/
+_build*
+build
+logs
+training
+.*.swp
+.*.swo
+.eggs
+.tox
+.vagrant
+.venv
+.venv9
+.DS_Store
+**/.DS_Store
+multic.egg-info

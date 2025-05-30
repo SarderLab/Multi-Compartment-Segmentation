@@ -241,7 +241,7 @@ def xml_suey(wsiMask, args, classNum, downsample,glob_offset):
     annots = convert_xml_json(Annotations, NAMES)
     for annot in annots:
         _ = gc.post(path='annotation',parameters={'itemId':args.item_id}, data = json.dumps(annot))
-        print('uploating layers')
+        print('uploading layers')
     print('annotation uploaded...\n')
 
 def get_contour_points(mask, args, downsample,value, offset={'X': 0,'Y': 0}):

@@ -47,7 +47,7 @@ def main(args):
     print(f'This is slide path: {file_path}')
 
     print('new version')
-    _ = os.system("printf '\n---\n\nFOUND: [{}]\n'".format(args.input_file))
+    _ = os.system("echo '\n---\n\nFOUND: [{}]\n'".format(args.input_file))
 
     cwd = os.getcwd()
     print(cwd)

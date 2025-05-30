@@ -59,11 +59,11 @@ def initializeFolderStructure(dirs,args):
 
     folder_base = args.base_dir
     base_directory_id = folder_base.split('/')[-2]
-    _ = os.system("printf '\nIn the base directory: {} {}\n'".format(base_directory_id,folder_base))
+    _ = os.system("echo '\nIn the base directory: {} {}\n'".format(base_directory_id,folder_base))
 
     folder_project = args.project
     project_directory_id = folder_project.split('/')[-2]
-    _ = os.system("printf '\nIn the base directory: {}{}\n'".format(project_directory_id,folder_base))
+    _ = os.system("echo '\nIn the base directory: {}{}\n'".format(project_directory_id,folder_base))
     
     gc = girder_client.GirderClient(apiUrl=args.girderApiUrl)
     gc.setToken(args.girderToken)

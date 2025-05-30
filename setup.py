@@ -45,13 +45,14 @@ setup(
     install_requires=[
         # scientific packages
         'nimfa>=1.3.2',
-        'numpy>=1.21.1',
+        'numpy>=1.21.1,<2.0',
         'scipy>=0.19.0',
         'Pillow==9.5.0',
         'pandas>=0.19.2',
         'imageio>=2.3.0',
         # 'shapely[vectorized]',
-        #'opencv-python-headless<4.7',
+        # 'opencv-python-headless',
+        # 'imgaug==0.4.0',
         #'sqlalchemy',
         # 'matplotlib',
         'pyvips',
@@ -78,6 +79,8 @@ setup(
         'girder-client',
         # cli
         'ctk-cli',
+        # detectron2 is installed in the dockerfile, so it needs to be commented out here
+        # 'detectron2 @ git+https://github.com/facebookresearch/detectron2@main',  # v0.6+patches
     ],
     license='Apache Software License 2.0',
     keywords='multic',

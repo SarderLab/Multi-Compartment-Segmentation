@@ -19,7 +19,7 @@ def convert_xml_json(root, names, colorList=None, alpha=0.4):
     for n, child in enumerate(anns):
         dataDict = dict()
         name = names[n]
-        _ = os.system("printf 'Building JSON layer: [{}]\n'".format(name))
+        _ = os.system("echo 'Building JSON layer: [{}]\n'".format(name))
         element = []
         reg = child.find('Regions')
         for i in reg.findall('Region'):

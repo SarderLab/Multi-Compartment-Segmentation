@@ -1,0 +1,11 @@
+# we do not want to copy git metadata
+.git
+
+# nor Python virtual environment
+.venv
+
+# sample images and other files
+*.svs
+*.pdf
+*.pth
+*.log

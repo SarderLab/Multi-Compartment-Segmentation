@@ -1,5 +1,5 @@
 #!/bin/sh
-#SBATCH --account=pinaki.sarder
+#SBATCH --account=pinaki.sarder-dsa
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=10
@@ -21,12 +21,12 @@ ls
 ml
 
 # Add your userid here:
-USER=f.afsari
+# USER=f.afsari
 # Add the name of the folder containing WSIs here
 PROJECT=multic_segment
 
-CODESDIR=/blue/pinaki.sarder/f.afsari/Codes/MultiC_test/multic/segmentationschool
-SIFDIR=/orange/pinaki.sarder/shared_singularity_files
+CODESDIR=/blue/pinaki.sarder/haitham.mohameda/MCS/MultiC_test/multic/segmentationschool
+SIFDIR=/orange/pinaki.sarder/Davy_Jones_Locker/TRUNK/shared_singularity_files
 
 DATADIR=$CODESDIR/test_data
 MODELDIR=$CODESDIR/pretrained_model

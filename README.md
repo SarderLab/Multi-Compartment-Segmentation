@@ -1,3 +1,7 @@
+# Running Slurm
+
+## For running slurm of test case please redirect to "multic/segmentationschool/slurm_predicting.sh" then it should be ready to run directly.
+
 # Multi Compartment Segmentation
 
 Multi compartment segmentation is a [detectron2](https://github.com/facebookresearch/detectron2) based panoptic segmentation model that is implemented as a pipeline in [Digital Slide Archive](https://athena.rc.ufl.edu/) (DSA) developed and maintained by [CMI lab](https://cmilab.nephrology.medicine.ufl.edu/) at the University of Florida. This DSA plugin allows users to segment a kidney Whole Slide Image (WSI) into 6 compartments, namely: cortical interstitium, medullary interstitium, non-sclerotic glomerulus, sclerotic glomerulus, tubule, and artery/arteriole.

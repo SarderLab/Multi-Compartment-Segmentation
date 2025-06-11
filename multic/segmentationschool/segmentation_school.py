@@ -23,7 +23,7 @@ main code for training semantic segmentation of WSI iteratively
     --transfer
         [<project name>]  -   pull newest model from specified project
                             for transfer learning
-
+        test run
 """
 def main(args):
 

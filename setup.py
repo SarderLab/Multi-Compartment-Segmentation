@@ -61,7 +61,7 @@ setup(
 
         'scikit-image>=0.19.2',
         # 'scikit-learn==1.0.2',
-        'lxml==4.8.0',
+        'lxml==5.2.1',
         'joblib==1.1.0',
         # 'tifffile==2023.4.12',
         'tiffslide',

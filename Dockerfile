@@ -7,7 +7,7 @@
 
 # start from nvidia/cuda 10.0
 # FROM nvidia/cuda:10.0-cudnn7-devel-ubuntu18.04
-FROM nvidia/cuda:11.1.1-base-ubuntu18.04
+FROM nvidia/cuda:12.4.0-base-ubuntu22.04
 LABEL com.nvidia.volumes.needed="nvidia_driver"
 
 LABEL maintainer="Sayat Mimar - Sarder Lab. <sayat.mimar@ufl.edu>"
@@ -19,7 +19,7 @@ ENV NVIDIA_VISIBLE_DEVICES all
 ENV NVIDIA_DRIVER_CAPABILITIES compute,utility
 
 # Remove bad repos
-RUN rm \
+RUN rm -f\
     /etc/apt/sources.list.d/cuda.list
 
 RUN apt-get update && \
@@ -35,15 +35,14 @@ RUN apt-get update && \
     #keyboard-configuration \
     git \
     wget \
-    python-qt4 \
-    python3-pyqt4 \
+    python3-pyqt5 \
     curl \
     ca-certificates \
     libcurl4-openssl-dev \
     libexpat1-dev \
     unzip \
     libhdf5-dev \
-    libpython-dev \
+    libpython2-dev \
     libpython3-dev \
     python2.7-dev \
     python-tk \
@@ -88,12 +87,12 @@ WORKDIR /
 #Make a specific version of python the default and install pip
 RUN rm -f /usr/bin/python && \
     rm -f /usr/bin/python3 && \
-    ln `which python3.8` /usr/bin/python && \
-    ln `which python3.8` /usr/bin/python3 && \
-    curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && \
+    ln -s $(which python3.8) /usr/bin/python && \
+    ln -s $(which python3.8) /usr/bin/python3 && \
+    curl https://bootstrap.pypa.io/pip/3.8/get-pip.py -o get-pip.py && \
     python get-pip.py && \
     rm get-pip.py && \
-    ln `which pip3` /usr/bin/pip
+    ln -s $(which pip3) /usr/bin/pip
 
 
 RUN which  python && \
@@ -121,8 +120,8 @@ WORKDIR $mc_path
 RUN pip install --no-cache-dir --upgrade --ignore-installed pip setuptools==69.5.1 && \
     pip install --no-cache-dir .  && \
     pip install --no-cache-dir tensorboard cmake onnx && \
-    pip install --no-cache-dir torch==1.10  torchaudio==0.10 torchvision==0.11.1 -f https://download.pytorch.org/whl/cu111/torch_stable.html && \
-    python -m pip install detectron2 -f https://dl.fbaipublicfiles.com/detectron2/wheels/cu111/torch1.10/index.html && \
+    pip install --no-cache-dir torch torchvision torchaudio && \
+    pip install --no-cache-dir --extra-index-url https://miropsota.github.io/torch_packages_builder detectron2==0.6+2a420edpt2.4.1cu124 && \
     rm -rf /root/.cache/pip/*
 
 RUN python --version && pip --version && pip freeze

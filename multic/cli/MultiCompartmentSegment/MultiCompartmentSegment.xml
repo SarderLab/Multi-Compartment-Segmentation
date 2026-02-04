@@ -2,7 +2,7 @@
 <executable>
   <category>HistomicsTK</category>
   <title>Multi Compartment Segmentation</title>
-  <description>Segments six Functional Tissue Units (arteries/arterioles, tubules, globallysclerotic glomeruli, non globally sclerotic glomeruli, medullary interstitium and  cortical_interstitium) from a FFPE preserved whole-slide image.</description>
+  <description>Segments 6 Functional Tissue Units (arteries/arterioles, tubules, globally sclerotic glomeruli, non globally sclerotic glomeruli, medullary interstitium and  cortical_interstitium) from a FFPE preserved whole-slide image.</description>
   <version>0.2.0</version>
   <documentation-url>https://github.com/SarderLab/deeplab-WSI</documentation-url>
   <license>Apache 2.0</license>
@@ -13,15 +13,15 @@
     <description>Input/output parameters</description>
     <image reference="_girder_id_">
       <name>input_file</name>
-      <label>input file</label>
-      <description>input file</description>
+      <label>Input Image</label>
+      <description>The whole slide image(s) (WSI) for which segmentation will be done</description>
       <channel>input</channel>
       <index>0</index>
     </image>
     <file>
       <name>modelfile</name>
-      <label>Model File</label>
-      <description> Trained model file</description>
+      <label>Segmentation Model File</label>
+      <description> Multi-Compartment Segmentation Model</description>
       <channel>input</channel>
       <index>1</index>
     </file>

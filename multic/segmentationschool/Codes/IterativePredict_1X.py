@@ -16,10 +16,62 @@ from scipy.ndimage.morphology import binary_fill_holes
 from tiffslide import TiffSlide
 from skimage.color import rgb2hsv
 from skimage.filters import gaussian
+import girder_client
 
 
 NAMES = ['cortical_interstitium','medullary_interstitium','non_globally_sclerotic_glomeruli','globally_sclerotic_glomeruli','tubules','arteries/arterioles']
 XML_COLOR = [65280, 16776960,65535, 255, 16711680, 33023]
+TITLE = 'Multi Compartment Segmentation on FUSION_MCS_FFPE_v1.pth'
+
+def get_user_id(gc):
+    try:
+        user = gc.get("/user/me")
+        if not user:
+            token_info = gc.get("/token/current")
+            if token_info and "userId" in token_info:
+                return token_info["userId"]
+            else:
+                print("Unable to retrieve user ID from token.")
+                return None
+        return user["_id"]
+    except girder_client.HttpError as e:
+        print(f"Authentication failed: {e}")
+        return None
+
+def get_user_info(gc, id):
+    try:
+        user = gc.get(f'/user/{id}')
+        return user
+    except girder_client.HttpError as e:
+        print(f"Failed to retrieve user info: {e}")
+        return None
+
+def get_user_running_jobs(gc, user_id):
+    try:
+        jobs = gc.get("job", parameters={
+            "userId": user_id,
+            "handlers": '["celery_handler"]',
+            "statuses": '[2]'
+        })
+        assert len(jobs) > 0, "No running jobs found for user."
+        return jobs
+    except girder_client.HttpError as e:
+        print(f"Failed to retrieve running jobs: {e}")
+        return []
+
+def get_job(gc, title):
+    user_id = get_user_id(gc)
+    if not user_id:
+        print("No user ID found. Cannot retrieve jobs.")
+        return None, None
+    user = get_user_info(gc, user_id)
+
+    running_jobs = get_user_running_jobs(gc, user_id)
+    for job in running_jobs:
+        if job["title"] == title:
+            return job, user['login']
+    print(f"No running jobs found with title '{title}'.")
+    return None, user['login']
 
 """
 Pipeline code to segment regions from WSI
@@ -63,6 +115,13 @@ def decode_panoptic(image,segments_info,organType,args):
 
 
 def predict(args):
+
+    # Get job ID early while job is still in running state
+    gc = args.gc
+    job, user_login = get_job(gc, TITLE)
+    job_id = job['_id'] if job else None
+    if job_id:
+        print(f"Using job ID: {job_id} for user: {user_login}")
 
     downsample = int(args.downsampleRateHR**.5)
     region_size = int(args.boxSize*(downsample))
@@ -200,10 +259,10 @@ def predict(args):
 
         if extname=='.scn':
             print('here writing 1')
-            xml_suey(wsiMask=wsiMask, args=args, classNum=classNum, downsample=downsample,glob_offset=[offsetx,offsety])
+            xml_suey(wsiMask=wsiMask, args=args, classNum=classNum, downsample=downsample,glob_offset=[offsetx,offsety], job_id=job_id, user_login=user_login)
         else:
             print('here writing 2')
-            xml_suey(wsiMask=wsiMask, args=args, classNum=classNum, downsample=downsample,glob_offset=[0,0])
+            xml_suey(wsiMask=wsiMask, args=args, classNum=classNum, downsample=downsample,glob_offset=[0,0], job_id=job_id, user_login=user_login)
 
 def coordinate_pairs(v1,v2):
     for i in v1:
@@ -214,7 +273,7 @@ def restart_line(): # for printing chopped image labels in command line
     sys.stdout.write('\r')
     sys.stdout.flush()
 
-def xml_suey(wsiMask, args, classNum, downsample,glob_offset):
+def xml_suey(wsiMask, args, classNum, downsample,glob_offset, job_id=None, user_login=None):
     # make xml
     Annotations = xml_create()
     # add annotation
@@ -238,10 +297,21 @@ def xml_suey(wsiMask, args, classNum, downsample,glob_offset):
             pointList = pointsList[i]
             Annotations = xml_add_region(Annotations=Annotations, pointList=pointList, annotationID=value)
     gc = args.gc
+
+    attributes = {
+        "job_id": job_id,
+        "plugin": TITLE,
+        "user": user_login if user_login else "system"
+    }
+
     annots = convert_xml_json(Annotations, NAMES)
     for annot in annots:
+        if not annot.get('elements'):
+            print(f'Skipping empty annotation: {annot.get("name")}')
+            continue
+        annot['attributes'] = attributes
         _ = gc.post(path='annotation',parameters={'itemId':args.item_id}, data = json.dumps(annot))
-        print('uploating layers')
+        print('uploading layers')
     print('annotation uploaded...\n')
 
 def get_contour_points(mask, args, downsample,value, offset={'X': 0,'Y': 0}):

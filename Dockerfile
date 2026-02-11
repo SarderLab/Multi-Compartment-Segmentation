@@ -79,6 +79,7 @@ RUN python -m pip install --no-cache-dir --no-build-isolation \
 
 RUN pip install --no-cache-dir tensorboard cmake onnx
 RUN pip install --no-cache-dir --no-build-isolation .
+RUN pip install --no-cache-dir "setuptools<71"
 
 RUN python --version && pip --version && pip freeze
 

@@ -46,7 +46,7 @@ def convert_xml_json(root, names, colorList=None, alpha=0.4):
                 points.append(eachPoint)
             eleDict["points"] = points
             eleDict["type"] = "polyline"
-            eleDict["group"] = "MultiCompartmentSegment"
+            eleDict["group"] = "Segmented FTU"
             eleDict["label"] = {"value": f"default polygon {len(element) + 1}"}
             element.append(eleDict)
         dataDict["elements"] = element

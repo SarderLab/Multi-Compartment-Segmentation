@@ -12,7 +12,7 @@ This DSA plugin allows users to run image analysis jobs through the HistomicsUI 
 
 <img src="figures/fig1.png"  width="60%" height="30%">
 
-4. From **Analyses** tab on the top right in HistomicsUI select: sarderlab/ComPRePS/segmentation/MultiCompartmentSegment
+4. From **Analyses** tab on the top right in HistomicsUI select: sarderlab/ComPRePS/segmentation/MultiC
 
 <img src="figures/fig2.png"  width="60%" height="30%">
 

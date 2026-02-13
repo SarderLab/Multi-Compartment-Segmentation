@@ -89,6 +89,6 @@ WORKDIR $mc_path/multic/cli
 # Test our entrypoint.  If we have incompatible versions of numpy and
 # openslide, one of these will fail
 RUN python -m slicer_cli_web.cli_list_entrypoint --list_cli
-RUN python -m slicer_cli_web.cli_list_entrypoint MultiCompartmentSegment --help
+RUN python -m slicer_cli_web.cli_list_entrypoint MultiC --help
 
 ENTRYPOINT ["/bin/bash", "docker-entrypoint.sh"]

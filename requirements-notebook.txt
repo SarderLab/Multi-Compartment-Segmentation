@@ -1,0 +1,24 @@
+# Dependencies for the Girder-free notebook version.
+# Mirrors setup.py install_requires but excludes:
+#   girder-slicer-cli-web, girder-client, ctk-cli
+
+nimfa>=1.4.0
+numpy>=1.26.4
+scipy>=1.11.4
+Pillow>=10.2.0
+pandas>=2.2.0
+imageio>=2.34.0
+pyvips>=2.2.2
+termcolor>=2.4.0
+opencv-python>=4.9.0.80
+scikit-image>=0.22.0
+lxml>=5.1.0
+joblib>=1.3.2
+tiffslide>=2.0.0
+tqdm>=4.66.0
+openpyxl>=3.1.2
+xlrd<2
+dask[dataframe]>=2024.1.0
+distributed>=2024.1.0
+jupyterlab
+ipywidgets>=8.0.0

@@ -304,6 +304,14 @@ def xml_suey(wsiMask, args, classNum, downsample,glob_offset, job_id=None, user_
         "user": user_login if user_login else "system"
     }
 
+    # Delete existing annotations from this plugin before uploading new ones
+    existing_annotations = gc.get('annotation', parameters={'itemId': args.item_id, 'limit': 0})
+    for existing in existing_annotations:
+        existing_attrs = existing.get('annotation', {}).get('attributes', {})
+        if existing_attrs.get('plugin') == TITLE:
+            gc.delete(f'annotation/{existing["_id"]}')
+            print(f'Deleted existing annotation: {existing["_id"]}')
+
     annots = convert_xml_json(Annotations, NAMES)
     for annot in annots:
         if not annot.get('elements'):

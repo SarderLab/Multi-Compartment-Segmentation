@@ -28,7 +28,7 @@ main code for training semantic segmentation of WSI iteratively
 def main(args):
 
     from segmentationschool.Codes.IterativeTraining_1X import IterateTraining
-    from segmentationschool.Codes.IterativePredict_1X import predict
+    from segmentationschool.Codes.IterativePredict_1X import predict, predict_notebook
 
     if args.option in ['train', 'Train']:
         IterateTraining(args=args)
@@ -36,8 +36,11 @@ def main(args):
     elif args.option in ['predict', 'Predict']:
         predict(args=args)
 
+    elif args.option in ['predict_notebook', 'Predict_notebook']:
+        predict_notebook(args=args)
+
     else:
-        print('please specify an option in: \n\t--option [predict or train]')
+        print('please specify an option in: \n\t--option [predict, train, or predict_notebook]')
 
 # importable function
 def run_it(args):

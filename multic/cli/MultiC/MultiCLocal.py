@@ -6,7 +6,7 @@ from segmentationschool.Codes.IterativePredict_notebook import predict
 
 
 DEFAULT_VALS = {
-    'option': 'predict',
+    'option': 'predict_notebook',
     'white_percent': 0.01,
     'chop_thumbnail_resolution': 16,
     'overlap_percentHR': 0,
@@ -27,9 +27,11 @@ def main(args):
 
     setattr(args, 'file', args.input_file)
 
+    os.makedirs(args.output_dir, exist_ok=True)
+
     print(f'Running on: {args.input_file}')
     print(f'Model: {args.modelfile}')
-    print(f'Output directory: {args.output_dir}')
+    print(f'Output dir: {args.output_dir}')
 
     for d in vars(args):
         print(f'argument: {d}, value: {getattr(args, d)}')

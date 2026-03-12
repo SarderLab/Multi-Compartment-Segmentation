@@ -254,7 +254,7 @@ def xml_suey(wsiMask, args, classNum, downsample, glob_offset):
         safe_name = annot["name"].replace('/', '_')
         out_path = os.path.join(args.output_dir, f'{safe_name}.json')
         with open(out_path, 'w') as f:
-            json.dump(annot, f, indent=2)
+            json.dump({"annotation": annot}, f, indent=2)
         print(f'Saved annotation: {out_path}')
     print('Annotations saved to disk.\n')
 

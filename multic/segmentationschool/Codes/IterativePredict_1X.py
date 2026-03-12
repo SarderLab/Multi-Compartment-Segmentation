@@ -21,7 +21,7 @@ import girder_client
 
 NAMES = ['cortical_interstitium','medullary_interstitium','non_globally_sclerotic_glomeruli','globally_sclerotic_glomeruli','tubules','arteries/arterioles']
 XML_COLOR = [65280, 16776960,65535, 255, 16711680, 33023]
-TITLE = 'Multi Compartment Segmentation on FUSION_MCS_FFPE_v1.pth'
+TITLE = 'Multi Compartment Segmentation'
 
 def get_user_id(gc):
     try:
@@ -68,9 +68,9 @@ def get_job(gc, title):
 
     running_jobs = get_user_running_jobs(gc, user_id)
     for job in running_jobs:
-        if job["title"] == title:
+        if job["title"].startswith(title):
             return job, user['login']
-    print(f"No running jobs found with title '{title}'.")
+    print(f"No running jobs found with title starting with '{title}'.")
     return None, user['login']
 
 """
@@ -303,6 +303,14 @@ def xml_suey(wsiMask, args, classNum, downsample,glob_offset, job_id=None, user_
         "plugin": TITLE,
         "user": user_login if user_login else "system"
     }
+
+    # Delete existing annotations from this plugin before uploading new ones
+    existing_annotations = gc.get('annotation', parameters={'itemId': args.item_id, 'limit': 0})
+    for existing in existing_annotations:
+        existing_attrs = existing.get('annotation', {}).get('attributes', {})
+        if existing_attrs.get('plugin') == TITLE:
+            gc.delete(f'annotation/{existing["_id"]}')
+            print(f'Deleted existing annotation: {existing["_id"]}')
 
     annots = convert_xml_json(Annotations, NAMES)
     for annot in annots:

@@ -24,10 +24,10 @@ ENV PYTHONUNBUFFERED=1
 RUN rm -f \
     /etc/apt/sources.list.d/cuda.list
 
-# System deps for building Python + your usual deps
+# System deps
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-      ca-certificates curl wget git unzip \
+      ca-certificates curl wget git unzip software-properties-common \
       build-essential make \
       libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev \
       libffi-dev liblzma-dev tk-dev \
@@ -39,19 +39,17 @@ RUN apt-get update && \
       libmemcached-dev memcached \
     && rm -rf /var/lib/apt/lists/*
 
-# --- Install Python 3.12 from source ---
-ENV PYTHON_VERSION=3.12.8
-RUN curl -fsSLO https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VERSION}.tgz && \
-    tar -xzf Python-${PYTHON_VERSION}.tgz && \
-    cd Python-${PYTHON_VERSION} && \
-    ./configure --enable-optimizations --with-ensurepip=install && \
-    make -j"$(nproc)" && \
-    make altinstall && \
-    cd / && rm -rf Python-${PYTHON_VERSION} Python-${PYTHON_VERSION}.tgz
+# --- Install Python 3.12 via deadsnakes PPA ---
+RUN add-apt-repository ppa:deadsnakes/ppa && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+      python3.12 python3.12-dev python3.12-venv \
+    && rm -rf /var/lib/apt/lists/*
 
 # Expose Python 3.12 as default python/python3
-RUN ln -sf /usr/local/bin/python3.12 /usr/bin/python3 && \
-    ln -sf /usr/local/bin/python3.12 /usr/bin/python && \
+RUN ln -sf /usr/bin/python3.12 /usr/bin/python3 && \
+    ln -sf /usr/bin/python3.12 /usr/bin/python && \
+    curl -sS https://bootstrap.pypa.io/get-pip.py | python3.12 && \
     ln -sf /usr/local/bin/pip3.12 /usr/bin/pip3 && \
     ln -sf /usr/local/bin/pip3.12 /usr/bin/pip
 
@@ -91,18 +89,22 @@ RUN pip install --no-cache-dir "setuptools<71"
 
 RUN python --version && pip --version && pip freeze
 
-# Make the multic package importable without pip install .
-ENV PYTHONPATH=$mc_path:$PYTHONPATH
+# MultiCLocal.py uses sys.path.append('..') so it must run from multic/cli/.
+# Adding multic/ to PYTHONPATH makes segmentationschool importable from there.
+ENV PYTHONPATH=$mc_path/multic:$mc_path
 
 # Expose JupyterLab port
 EXPOSE 8888
 
-# Default working directory for notebooks
-WORKDIR $mc_path
+# Working directory matches where MultiCLocal.py resolves its relative imports.
+WORKDIR $mc_path/multic/cli
 
 # CMD is used (not ENTRYPOINT) so it can be fully overridden by docker run.
 # Default: start JupyterLab
 #   docker run -p 8888:8888 <image>
-# Override to run a script:
-#   docker run <image> python /opt/MultiC/test_decoupled.py
+# Run batch segmentation via MultiCLocal.py:
+#   docker run <image> python MultiC/MultiCLocal.py \
+#       --input_file /data/slide.svs \
+#       --modelfile /data/model.pth \
+#       --output_dir /data/output
 CMD ["jupyter", "lab", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--allow-root", "--NotebookApp.token=", "--NotebookApp.password="]

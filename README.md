@@ -28,7 +28,7 @@ multic/
 │   └── MultiC/
 │       ├── MultiC.py               # Girder-coupled CLI entry point (ctk-cli)
 │       ├── MultiC.xml              # Slicer CLI parameter definition
-│       └── MultiC_notebook.py      # Standalone CLI entry point (argparse, no Girder)
+│       └── MultiCLocal.py      # Standalone CLI entry point (argparse, no Girder)
 ├── segmentationschool/
 │   ├── segmentation_school.py      # Router: train / predict
 │   └── Codes/

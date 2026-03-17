@@ -108,7 +108,7 @@ def predict(args):
     print(basename)
 
     try:
-        slide=TiffSlide(wsi)
+        slide=TiffSlide(wsi, tifffile_options={"is_imagej": False})
     except:
         raise Exception(f"The slide cannot be read!!")
         

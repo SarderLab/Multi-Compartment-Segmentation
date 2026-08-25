@@ -128,9 +128,9 @@ RUN python --version && pip --version && pip freeze
 
 WORKDIR $mc_path/multic/cli
 LABEL entry_path=$mc_path/multic/cli
-# Test our entrypoint.  If we have incompatible versions of numpy and
-# openslide, one of these will fail
-RUN python -m slicer_cli_web.cli_list_entrypoint --list_cli
-RUN python -m slicer_cli_web.cli_list_entrypoint MultiCompartmentSegment --help
+# retire-girder-dependency: no more slicer_cli_web CLI-XML entrypoint to smoke-test at build time;
+# import the rewritten entrypoint's dependencies instead so incompatible numpy/openslide versions
+# still fail the build the same way the old check did
+RUN python -c "import torch, detectron2, tiffslide, requests"
 
 ENTRYPOINT ["/bin/bash", "docker-entrypoint.sh"]

@@ -1,5 +1,8 @@
 import cv2
-from multic.segmentationschool.Codes.upload_assetstore_files import uploadFilesToOriginalFolder
+# retire-girder-dependency: uploadFilesToOriginalFolder wrote directly to Girder's assetstore
+# filesystem path (and carried a hardcoded fallback admin API key) — replaced by a plain per-file
+# upload against the storage API, see cli/MultiCompartmentSegment/storage_client.py
+from multic.cli.MultiCompartmentSegment.storage_client import upload_result_files
 import numpy as np
 import os
 import json
@@ -258,8 +261,8 @@ def xml_suey(wsiMask, args, classNum, downsample,glob_offset):
         f.write(ET.tostring(Annotations, pretty_print=True).decode('utf-8'))
     output_files.append(os.path.join(output_dir, 'annotations.xml'))
     print('output files: ', output_files)
-    # upload files to original user folder
-    uploadFilesToOriginalFolder(gc, output_files, args.item_id, 'MultiCompartment_Segmentation', args.girderApiUrl, True)
+    # upload result files to first-party storage
+    upload_result_files(args.storage_client, output_files, args.item_id)
     print('annotation uploaded...\n')
 
 def get_contour_points(mask, args, downsample,value, offset={'X': 0,'Y': 0}):

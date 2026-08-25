@@ -74,10 +74,9 @@ setup(
         'distributed>=1.21.6',
         # large image sources
         # 'large-image[sources]',
-        'girder-slicer-cli-web',
-        'girder-client',
-        # cli
-        'ctk-cli',
+        # retire-girder-dependency: girder-slicer-cli-web/girder-client/ctk-cli dropped —
+        # I/O now goes through storage_client.py (StorageClient) against the first-party storage API
+        'requests',
     ],
     license='Apache Software License 2.0',
     keywords='multic',

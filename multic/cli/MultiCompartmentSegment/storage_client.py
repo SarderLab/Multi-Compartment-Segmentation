@@ -5,7 +5,20 @@ yet, so nothing here has been run against a real server) using JOB_AUTH_TOKEN (T
 per-job-scoped JWT) as Bearer auth. The exact endpoint paths below are a guess at the contract, not
 a confirmed API — update once Task Group 3.2 exists for real.
 """
+import os
+import re
+
 import requests
+
+_CONTENT_DISPOSITION_FILENAME_RE = re.compile(r'filename\*?=(?:UTF-8\'\')?"?([^;"\n]+)"?')
+
+
+def _filename_from_response(resp, fallback):
+    """Reads the real filename off Content-Disposition rather than the caller guessing an
+    extension (e.g. assuming .svs, which is wrong for .tif/.ndpi/etc. slides)."""
+    header = resp.headers.get('Content-Disposition', '')
+    match = _CONTENT_DISPOSITION_FILENAME_RE.search(header)
+    return match.group(1).strip() if match else fallback
 
 
 class StorageClient:
@@ -22,9 +35,18 @@ class StorageClient:
         with open(dest_path, 'wb') as f:
             for chunk in resp.iter_content(chunk_size=1 << 20):
                 f.write(chunk)
+        return resp
 
-    def download_input(self, item_id, dest_path):
-        self._download(f'/items/{item_id}/file', dest_path)
+    def download_input(self, item_id, dest_dir):
+        """Downloads this item's WSI into dest_dir using its real filename (from the server's
+        Content-Disposition header), not a guessed extension. Returns the local path."""
+        os.makedirs(dest_dir, exist_ok=True)
+        tmp_path = os.path.join(dest_dir, f'.{item_id}.download')
+        resp = self._download(f'/items/{item_id}/file', tmp_path)
+        filename = _filename_from_response(resp, fallback=f'{item_id}.bin')
+        dest_path = os.path.join(dest_dir, filename)
+        os.replace(tmp_path, dest_path)
+        return dest_path
 
     def download_model(self, model_id, dest_path):
         self._download(f'/models/{model_id}', dest_path)

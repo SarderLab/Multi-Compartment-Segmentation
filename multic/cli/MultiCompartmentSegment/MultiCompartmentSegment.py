@@ -49,9 +49,9 @@ def main():
     client = StorageClient(storage_api_url, job_auth_token)
 
     mounted_path = os.getenv('TMPDIR', '/tmp')
-    file_path = os.path.join(mounted_path, f'{item_id}.svs')
-    print(f'Downloading input for item {item_id} to {file_path}')
-    client.download_input(item_id, file_path)
+    print(f'Downloading input for item {item_id} to {mounted_path}')
+    file_path = client.download_input(item_id, mounted_path)
+    print(f'Downloaded to: {file_path}')
 
     model_path = os.path.join(mounted_path, 'model.pth')
     print(f'Downloading model {model_id} to {model_path}')

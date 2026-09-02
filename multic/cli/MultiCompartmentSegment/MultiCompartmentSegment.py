@@ -53,9 +53,13 @@ def main():
     file_path = client.download_input(item_id, mounted_path)
     print(f'Downloaded to: {file_path}')
 
-    model_path = os.path.join(mounted_path, 'model.pth')
-    print(f'Downloading model {model_id} to {model_path}')
-    client.download_model(model_id, model_path)
+    model_dir = os.path.join(mounted_path, 'model')
+    print(f'Downloading model {model_id} to {model_dir}')
+    client.download_model_dir(model_id, model_dir)
+    model_files = os.listdir(model_dir)
+    if len(model_files) != 1:
+        raise RuntimeError(f'Expected exactly one file in model {model_id}, found: {model_files}')
+    model_path = os.path.join(model_dir, model_files[0])
 
     print(f'This is slide path: {file_path}')
 

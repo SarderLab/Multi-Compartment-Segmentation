@@ -1,12 +1,10 @@
 """First-party storage API client, replacing girder_client for this container's I/O.
 
-Talks to STORAGE_API_URL (retire-girder-dependency Task Group 3.2 — not built as an HTTP surface
-yet, so nothing here has been run against a real server) using JOB_AUTH_TOKEN (Task Group 5, a real
-per-job-scoped JWT) as Bearer auth. The exact endpoint paths below are a guess at the contract, not
-a confirmed API — update once Task Group 3.2 exists for real.
+Talks to STORAGE_API_URL using JOB_AUTH_TOKEN (a per-job-scoped JWT) as Bearer auth.
 """
 import os
 import re
+import zipfile
 
 import requests
 
@@ -48,8 +46,17 @@ class StorageClient:
         os.replace(tmp_path, dest_path)
         return dest_path
 
-    def download_model(self, model_id, dest_path):
-        self._download(f'/models/{model_id}', dest_path)
+    def download_model_dir(self, model_id, dest_dir):
+        """Every model is served as a directory now (pipeline-model-registry design.md D1), fetched
+        as a zip and extracted — same contract IFTA's storage_client.py already used, unified here
+        rather than this pipeline's old single-file download_model()."""
+        os.makedirs(dest_dir, exist_ok=True)
+        zip_path = dest_dir.rstrip('/') + '.zip'
+        self._download(f'/models/{model_id}?format=zip', zip_path)
+        with zipfile.ZipFile(zip_path) as zf:
+            zf.extractall(dest_dir)
+        os.remove(zip_path)
+        return dest_dir
 
     def post(self, path, parameters=None, data=None):
         """girder_client.GirderClient-compatible signature — existing `gc.post(path=..., parameters=..., data=...)`
